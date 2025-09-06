@@ -21,7 +21,7 @@ class QuestionMediaForm
                     ->schema([
                         Select::make('question_id')
                             ->label('Question')
-                            ->options(Question::all()->pluck('question_text', 'id'))
+                            ->options(Question::all()->mapWithKeys(fn($q) => [$q->id => strip_tags($q->question_text)]))
                             ->searchable()
                             ->required(),
                         Select::make('media_type')

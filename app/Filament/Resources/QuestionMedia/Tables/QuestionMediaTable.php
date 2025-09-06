@@ -19,6 +19,7 @@ class QuestionMediaTable
                 TextColumn::make('question.question_text')
                     ->label('Question')
                     ->searchable()
+                    ->html()
                     ->limit(50),
                 BadgeColumn::make('media_type')
                     ->label('Type')
