@@ -28,7 +28,9 @@ class FeedbacksTable
                     ->searchable(),
                 TextColumn::make('feedback_text')
                     ->label('Feedback Text')
-                    ->limit(100)
+                    ->html()
+                    ->wrap()
+                    ->limit(50)
                     ->searchable(),
                 ToggleColumn::make('ai_generated')
                     ->label('AI Generated'),
