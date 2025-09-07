@@ -23,7 +23,7 @@ class AttemptAnswerResource extends Resource
     protected static ?string $model = AttemptAnswer::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;
-    protected static string|UnitEnum|null $navigationGroup = 'Questions & Answers';
+    protected static string|UnitEnum|null $navigationGroup = 'Assessments';
 
     public static function form(Schema $schema): Schema
     {
