@@ -16,24 +16,20 @@ class FeedbacksTable
     {
         return $table
             ->columns([
-                TextColumn::make('attempt_answer_id')
-                    ->label('Attempt Answer ID')
-                    ->sortable()
-                    ->searchable(),
                 TextColumn::make('attemptAnswer.question.question_text')
                     ->label('Question')
                     ->html()
                     ->wrap()
                     ->limit(30)
-                    ->searchable(),
+                    ->searchable()
+                    ->grow(),
                 TextColumn::make('feedback_text')
                     ->label('Feedback Text')
                     ->html()
                     ->wrap()
                     ->limit(30)
-                    ->searchable(),
-                ToggleColumn::make('ai_generated')
-                    ->label('AI Generated'),
+                    ->searchable()
+                    ->grow(),
                 TextColumn::make('attemptAnswer.attempt.user.name')
                     ->label('Student')
                     ->searchable()
