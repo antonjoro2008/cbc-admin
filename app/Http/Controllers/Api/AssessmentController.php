@@ -5,7 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\Subject;
+use App\Models\AssessmentAttempt;
+use App\Models\AttemptAnswer;
+use App\Models\Question;
+use App\Models\Answer;
+use App\Models\Feedback;
+use App\Models\FeedbackMedia;
+use App\Models\AnswerMedia;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class AssessmentController extends Controller
 {
@@ -183,5 +192,302 @@ class AssessmentController extends Controller
             'success' => true,
             'data' => $assessments
         ]);
+    }
+
+    /**
+     * Submit assessment answers
+     */
+    public function submitAssessment(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'assessment_id' => 'required|exists:assessments,id',
+            'user_id' => 'required|exists:users,id',
+            'submission_data' => 'required|array',
+            'submission_data.start_time' => 'required|date',
+            'submission_data.end_time' => 'required|date',
+            'submission_data.time_taken_seconds' => 'required|integer|min:0',
+            'submission_data.total_questions' => 'required|integer|min:1',
+            'submission_data.questions_answered' => 'required|integer|min:0',
+            'submission_data.answers' => 'required|array',
+            'submission_data.answers.*.question_id' => 'required|exists:questions,id',
+            'submission_data.answers.*.question_type' => 'required|in:mcq,true_false,short_answer,essay,matching,fill_blank',
+            'submission_data.answers.*.answer' => 'required|array',
+            'metadata' => 'sometimes|array'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $assessmentId = $request->assessment_id;
+            $userId = $request->user_id;
+            $submissionData = $request->submission_data;
+            $answers = $submissionData['answers'];
+
+            // Get or create assessment attempt
+            $attempt = AssessmentAttempt::updateOrCreate(
+                [
+                    'assessment_id' => $assessmentId,
+                    'student_id' => $userId
+                ],
+                [
+                    'started_at' => $submissionData['start_time'],
+                    'completed_at' => $submissionData['end_time'],
+                    'score' => 0 // Will be calculated later
+                ]
+            );
+
+            $totalQuestions = $submissionData['total_questions'];
+            $questionsAnswered = $submissionData['questions_answered'];
+            $autoMarkedQuestions = 0;
+            $notAutoMarkedQuestions = 0;
+            $correctAnswers = 0;
+            $totalMarksForAutoMarked = 0;
+            $marksAwarded = 0;
+            $feedbackData = [];
+
+            // Process each answer
+            foreach ($answers as $answerData) {
+                $questionId = $answerData['question_id'];
+                $questionType = $answerData['question_type'];
+                $answer = $answerData['answer'];
+
+                // Get question details
+                $question = Question::with(['answers.media'])->find($questionId);
+                if (!$question) {
+                    continue;
+                }
+
+                $questionMarks = $question->marks;
+
+                // Check if question can be auto-marked
+                $canAutoMark = in_array($questionType, ['mcq', 'true_false', 'matching', 'fill_blank']);
+                
+                if ($canAutoMark) {
+                    $autoMarkedQuestions++;
+                    $totalMarksForAutoMarked += $questionMarks;
+                    $isCorrect = $this->markAnswer($question, $questionType, $answer);
+                    $marksForQuestion = $isCorrect ? $questionMarks : 0;
+                    $marksAwarded += $marksForQuestion;
+                    
+                    if ($isCorrect) {
+                        $correctAnswers++;
+                    }
+                } else {
+                    $notAutoMarkedQuestions++;
+                    $isCorrect = null; // Manual marking required
+                    $marksForQuestion = 0; // Will be marked manually later
+                }
+
+                // Save attempt answer
+                $attemptAnswer = AttemptAnswer::create([
+                    'attempt_id' => $attempt->id,
+                    'question_id' => $questionId,
+                    'selected_answer_id' => $answer['selected_answer_id'] ?? null,
+                    'student_answer_text' => $this->formatStudentAnswer($questionType, $answer),
+                    'is_correct' => $isCorrect,
+                    'marks_awarded' => $marksForQuestion
+                ]);
+
+                // Generate feedback for auto-marked questions
+                if ($canAutoMark) {
+                    $feedback = $this->generateFeedback($question, $questionType, $answer, $isCorrect);
+                    
+                    // Save feedback
+                    $feedbackRecord = Feedback::create([
+                        'attempt_answer_id' => $attemptAnswer->id,
+                        'feedback_text' => $feedback['text'],
+                        'ai_generated' => false
+                    ]);
+
+                    // Save feedback media if any
+                    if (isset($feedback['media']) && !empty($feedback['media'])) {
+                        foreach ($feedback['media'] as $media) {
+                            FeedbackMedia::create([
+                                'feedback_id' => $feedbackRecord->id,
+                                'media_type' => $media['media_type'],
+                                'media_url' => $media['file_path']
+                            ]);
+                        }
+                    }
+
+                    $feedbackData[] = [
+                        'question_number' => $question->question_number,
+                        'question_text' => $question->question_text,
+                        'selected_answer' => $this->formatStudentAnswer($questionType, $answer),
+                        'is_correct' => $isCorrect,
+                        'explanation' => $feedback['explanation'],
+                        'correct_answer' => $isCorrect ? null : $feedback['correct_answer'],
+                        'media' => $feedback['media'] ?? []
+                    ];
+                }
+            }
+
+            // Calculate percentage based on auto-marked questions only
+            $percentage = $totalMarksForAutoMarked > 0 ? round(($marksAwarded / $totalMarksForAutoMarked) * 100, 2) : 0;
+
+            // Update attempt with final score
+            $attempt->update(['score' => $marksAwarded]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Assessment submitted successfully',
+                'data' => [
+                    'attempt_id' => $attempt->id,
+                    'summary' => [
+                        'total_questions' => $totalQuestions,
+                        'questions_answered' => $questionsAnswered,
+                        'auto_marked_questions' => $autoMarkedQuestions,
+                        'not_auto_marked_questions' => $notAutoMarkedQuestions,
+                        'correct_answers' => $correctAnswers,
+                        'incorrect_answers' => $autoMarkedQuestions - $correctAnswers,
+                        'score' => $marksAwarded,
+                        'out_of' => $totalMarksForAutoMarked,
+                        'percentage' => $percentage
+                    ],
+                    'feedback' => $feedbackData
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Assessment submission failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mark answer based on question type
+     */
+    private function markAnswer($question, $questionType, $answer)
+    {
+        switch ($questionType) {
+            case 'mcq':
+                $selectedAnswerId = $answer['selected_answer_id'] ?? null;
+                $correctAnswer = $question->answers()->where('is_correct', true)->first();
+                return $correctAnswer && $correctAnswer->id == $selectedAnswerId;
+
+            case 'true_false':
+                $selectedOption = $answer['selected_option'] ?? null;
+                $correctAnswer = $question->answers()->where('is_correct', true)->first();
+                return $correctAnswer && $correctAnswer->answer_text === ucfirst($selectedOption);
+
+            case 'matching':
+                // For matching questions, compare the matches
+                $studentMatches = $answer['matches'] ?? [];
+                $correctAnswers = $question->answers()->where('is_correct', true)->get();
+                
+                if (count($studentMatches) !== $correctAnswers->count()) {
+                    return false;
+                }
+
+                foreach ($studentMatches as $match) {
+                    $found = $correctAnswers->where('answer_text', $match['left_item'] . '|' . $match['right_item'])->first();
+                    if (!$found) {
+                        return false;
+                    }
+                }
+                return true;
+
+            case 'fill_blank':
+                $studentBlanks = $answer['blanks'] ?? [];
+                $correctAnswers = $question->answers()->where('is_correct', true)->get();
+                
+                if (count($studentBlanks) !== $correctAnswers->count()) {
+                    return false;
+                }
+
+                foreach ($studentBlanks as $blank) {
+                    $found = $correctAnswers->where('answer_text', $blank['text'])->first();
+                    if (!$found) {
+                        return false;
+                    }
+                }
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Format student answer for storage
+     */
+    private function formatStudentAnswer($questionType, $answer)
+    {
+        switch ($questionType) {
+            case 'mcq':
+                return $answer['answer_text'] ?? '';
+            case 'true_false':
+                return $answer['answer_text'] ?? '';
+            case 'short_answer':
+            case 'essay':
+                return $answer['text_response'] ?? '';
+            case 'matching':
+                return json_encode($answer['matches'] ?? []);
+            case 'fill_blank':
+                return json_encode($answer['blanks'] ?? []);
+            default:
+                return '';
+        }
+    }
+
+    /**
+     * Generate feedback for an answer
+     */
+    private function generateFeedback($question, $questionType, $answer, $isCorrect)
+    {
+        $feedback = [
+            'text' => '',
+            'explanation' => '',
+            'correct_answer' => null,
+            'media' => []
+        ];
+
+        if ($isCorrect) {
+            $feedback['text'] = 'Correct!';
+            $correctAnswer = $question->answers()->where('is_correct', true)->first();
+            if ($correctAnswer && $correctAnswer->explanation) {
+                $feedback['explanation'] = $correctAnswer->explanation;
+                $feedback['text'] .= ' ' . $correctAnswer->explanation;
+            }
+        } else {
+            $feedback['text'] = 'Incorrect.';
+            $correctAnswer = $question->answers()->where('is_correct', true)->first();
+            if ($correctAnswer) {
+                $feedback['correct_answer'] = $correctAnswer->answer_text;
+                $feedback['explanation'] = $correctAnswer->explanation ?? 'This is the correct answer.';
+                $feedback['text'] .= ' The correct answer is: ' . $correctAnswer->answer_text;
+                if ($correctAnswer->explanation) {
+                    $feedback['text'] .= '. ' . $correctAnswer->explanation;
+                }
+
+                // Include media from correct answer
+                if ($correctAnswer->media) {
+                    foreach ($correctAnswer->media as $media) {
+                        $feedback['media'][] = [
+                            'media_type' => $media->media_type,
+                            'file_path' => $media->file_path,
+                            'caption' => $media->caption
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $feedback;
     }
 }
