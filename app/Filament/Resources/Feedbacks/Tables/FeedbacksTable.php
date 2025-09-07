@@ -24,13 +24,13 @@ class FeedbacksTable
                     ->label('Question')
                     ->html()
                     ->wrap()
-                    ->limit(50)
+                    ->limit(30)
                     ->searchable(),
                 TextColumn::make('feedback_text')
                     ->label('Feedback Text')
                     ->html()
                     ->wrap()
-                    ->limit(50)
+                    ->limit(30)
                     ->searchable(),
                 ToggleColumn::make('ai_generated')
                     ->label('AI Generated'),
@@ -41,14 +41,6 @@ class FeedbacksTable
                 TextColumn::make('attemptAnswer.attempt.assessment.title')
                     ->label('Assessment')
                     ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 //
