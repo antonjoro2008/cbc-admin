@@ -22,6 +22,8 @@ class FeedbacksTable
                     ->searchable(),
                 TextColumn::make('attemptAnswer.question.question_text')
                     ->label('Question')
+                    ->html()
+                    ->wrap()
                     ->limit(50)
                     ->searchable(),
                 TextColumn::make('feedback_text')

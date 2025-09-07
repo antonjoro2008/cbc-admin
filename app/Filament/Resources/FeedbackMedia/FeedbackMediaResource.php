@@ -22,7 +22,8 @@ class FeedbackMediaResource extends Resource
     protected static ?string $model = FeedbackMedia::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPhoto;
-    protected static string|UnitEnum|null $navigationGroup = 'Questions & Answers';
+    protected static string|UnitEnum|null $navigationLabel = 'Assessment Feedback Media';
+    protected static string|UnitEnum|null $navigationGroup = 'Assessments';
 
     public static function form(Schema $schema): Schema
     {

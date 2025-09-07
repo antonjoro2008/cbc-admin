@@ -18,6 +18,8 @@ class AttemptAnswersTable
             ->columns([
                 TextColumn::make('question.question_text')
                     ->label('Question')
+                    ->html()
+                    ->wrap()
                     ->searchable()
                     ->limit(100),
                 TextColumn::make('assessment_attempt.id')

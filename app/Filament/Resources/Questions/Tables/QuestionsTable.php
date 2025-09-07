@@ -30,6 +30,7 @@ class QuestionsTable
                 TextColumn::make('question_text')
                     ->label('Question')
                     ->html()
+                    ->wrap()
                     ->searchable()
                     ->limit(80),
                 BadgeColumn::make('question_type')
