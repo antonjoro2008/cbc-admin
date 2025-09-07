@@ -36,6 +36,7 @@ class FeedbacksTable
                     ->sortable(),
                 TextColumn::make('attemptAnswer.attempt.assessment.title')
                     ->label('Assessment')
+                    ->wrap()
                     ->searchable(),
             ])
             ->filters([
