@@ -73,9 +73,7 @@ class AssessmentController extends Controller
             'subject',
             'creator.institution',
             'sections.questions.media',
-            'sections.questions.answers',
-            'questions.media',
-            'questions.answers'
+            'sections.questions.answers'
         ]);
 
         return response()->json([
