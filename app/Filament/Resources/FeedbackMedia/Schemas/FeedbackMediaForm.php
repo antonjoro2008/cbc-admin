@@ -36,6 +36,7 @@ class FeedbackMediaForm
                     ]),
                 FileUpload::make('media_url')
                     ->label('Media File')
+                    ->disk('public')
                     ->required(),
             ]);
     }

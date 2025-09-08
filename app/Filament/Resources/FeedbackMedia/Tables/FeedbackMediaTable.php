@@ -7,6 +7,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Table;
 
@@ -30,10 +31,10 @@ class FeedbackMediaTable
                         'secondary' => 'doc',
                         'danger' => 'link',
                     ]),
-                TextColumn::make('media_url')
+                ImageColumn::make('media_url')
                     ->label('Media URL')
-                    ->searchable()
-                    ->limit(50),
+                    ->circular()
+                    ->size(40),
             ])
             ->filters([
                 //

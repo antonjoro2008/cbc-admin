@@ -632,8 +632,8 @@ class AssessmentController extends Controller
         $allExplanations = '';
         foreach ($allAnswers as $answerOption) {
             if ($answerOption->explanation) {
-                $optionLabel = $this->getAnswerOptionLabel($answerOption, $allAnswers);
-                $allExplanations .= "<p>{$optionLabel} {$answerOption->answer_text} - {$answerOption->explanation}</p>";
+                // $optionLabel = $this->getAnswerOptionLabel($answerOption, $allAnswers);
+                $allExplanations .= "<p>{$answerOption->answer_text} - {$answerOption->explanation}</p>";
             }
         }
         

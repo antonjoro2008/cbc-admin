@@ -38,6 +38,7 @@ class QuestionMediaForm
                 FileUpload::make('file_path')
                     ->label('File')
                     ->columnSpanFull()
+                    ->disk('public')
                     ->required(),
                 RichEditor::make('caption')
                     ->label('Caption')

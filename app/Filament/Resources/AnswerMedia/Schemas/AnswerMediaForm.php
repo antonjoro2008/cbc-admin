@@ -38,6 +38,7 @@ class AnswerMediaForm
                 FileUpload::make('file_path')
                     ->label('File')
                     ->columnSpanFull()
+                    ->disk('public')
                     ->required(),
                 Textarea::make('caption')
                     ->columnSpanFull()
