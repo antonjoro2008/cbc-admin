@@ -28,9 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('/')
-            ->brandLogo(
-                Storage::url('images/logo.png')
-            )
+            ->brandLogo(fn() => view('components.custom-styles'))
             ->login()
             ->colors([
                 'primary' => '#705EBC',
