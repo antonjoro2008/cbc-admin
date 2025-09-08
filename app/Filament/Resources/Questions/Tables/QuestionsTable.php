@@ -27,12 +27,12 @@ class QuestionsTable
                     ->label('Section')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('question_text')
-                    ->label('Question')
-                    ->html()
-                    ->wrap()
-                    ->searchable()
-                    ->limit(80),
+                // TextColumn::make('question_text')
+                //     ->label('Question')
+                //     ->html()
+                //     ->wrap()
+                //     ->searchable()
+                //     ->limit(80),
                 BadgeColumn::make('question_type')
                     ->label('Type')
                     ->colors([
