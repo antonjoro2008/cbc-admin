@@ -18,7 +18,7 @@ class AssessmentForm
     {
         return $schema
             ->components([
-                Grid::make(2)
+                Grid::make(3)
                     ->columnSpanFull()
                     ->schema([
                         Select::make('subject_id')
@@ -28,6 +28,14 @@ class AssessmentForm
                             ->required(),
                         TextInput::make('title')
                             ->label('Title')
+                            ->required(),
+                        Select::make('status')
+                            ->label('Status')
+                            ->options([
+                                0 => 'Inactive',
+                                1 => 'Active',
+                            ])
+                            ->default(1)
                             ->required(),
                     ]),
                 RichEditor::make('description')

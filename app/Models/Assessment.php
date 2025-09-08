@@ -29,6 +29,7 @@ class Assessment extends Model
         'duration_minutes',
         'instructions',
         'uses_answer_sheet',
+        'status'
     ];
 
     /**

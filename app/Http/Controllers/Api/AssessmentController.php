@@ -26,7 +26,8 @@ class AssessmentController extends Controller
     public function index(Request $request)
     {
         $query = Assessment::with(['subject', 'creator.institution'])
-            ->whereHas('questions'); // Only return assessments that have questions
+            ->whereHas('questions') // Only return assessments that have questions
+            ->where('status', 1); // Only return assessments with status 1
 
         // Apply search filters
         if ($request->has('search')) {
