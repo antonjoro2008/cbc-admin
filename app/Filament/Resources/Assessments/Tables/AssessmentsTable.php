@@ -9,6 +9,7 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
+use Filament\Support\Enums\FontWeight;
 
 class AssessmentsTable
 {
@@ -38,9 +39,19 @@ class AssessmentsTable
                     ->sortable(),
                 ToggleColumn::make('uses_answer_sheet')
                     ->label('Answer Sheet'),
-                TextColumn::make('creator.name')
-                    ->label('Created By')
-                    ->searchable(),
+                TextColumn::make('status')
+                    ->label('Status')
+                    ->formatStateUsing(function ($state) {
+                        return $state == 1 ? 'Active' : 'Inactive';
+                    })
+                    ->badge()
+                    ->color(function ($state) {
+                        return $state == 1 ? 'success' : 'danger';
+                    })
+                    ->icon(function ($state) {
+                        return $state == 1 ? 'heroicon-o-check-circle' : 'heroicon-o-x-circle';
+                    })
+                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
