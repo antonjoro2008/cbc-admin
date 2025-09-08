@@ -490,7 +490,7 @@ class AssessmentController extends Controller
                         'question_text' => $question->question_text,
                         'selected_answer' => $this->formatStudentAnswer($questionType, $answer),
                         'is_correct' => $isCorrect,
-                        'explanation' => $feedback['explanation'],
+                        'explanation' => $feedback['all_explanations'],
                         'correct_answer' => $isCorrect ? null : $feedback['correct_answer'],
                         'media' => $feedback['media'] ?? []
                     ];
@@ -621,8 +621,23 @@ class AssessmentController extends Controller
             'text' => '',
             'explanation' => '',
             'correct_answer' => null,
+            'all_explanations' => '',
             'media' => []
         ];
+
+        // Get all answers for this question
+        $allAnswers = $question->answers()->orderBy('id')->get();
+        
+        // Generate explanations for all possible answers
+        $allExplanations = '';
+        foreach ($allAnswers as $answerOption) {
+            if ($answerOption->explanation) {
+                $optionLabel = $this->getAnswerOptionLabel($answerOption, $allAnswers);
+                $allExplanations .= "<p>{$optionLabel} {$answerOption->answer_text} - {$answerOption->explanation}</p>";
+            }
+        }
+        
+        $feedback['all_explanations'] = $allExplanations;
 
         if ($isCorrect) {
             $feedback['text'] = 'Correct!';
@@ -656,5 +671,17 @@ class AssessmentController extends Controller
         }
 
         return $feedback;
+    }
+
+    /**
+     * Get answer option label (A, B, C, D, etc.)
+     */
+    private function getAnswerOptionLabel($answer, $allAnswers)
+    {
+        $index = $allAnswers->search(function ($item) use ($answer) {
+            return $item->id === $answer->id;
+        });
+        
+        return chr(65 + $index); // A, B, C, D, etc.
     }
 }
