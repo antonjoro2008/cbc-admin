@@ -25,11 +25,13 @@ class QuestionForm
                             ->options(Assessment::all()->pluck('title', 'id'))
                             ->searchable()
                             ->required()
+                            ->preload()
                             ->relationship('assessment', 'title'),
                         Select::make('section_id')
                             ->label('Section')
                             ->options(AssessmentSection::all()->pluck('title', 'id'))
                             ->searchable()
+                            ->preload()
                             ->required()
                             ->relationship('section', 'title'),
                     ]),
@@ -67,6 +69,7 @@ class QuestionForm
                     ->columnSpanFull()
                     ->options(Question::all()->pluck('question_text', 'id'))
                     ->searchable()
+                    ->preload()
                     ->placeholder('Select parent question if this is a sub-question')
                     ->relationship('parentQuestion', 'question_text'),
             ]);
