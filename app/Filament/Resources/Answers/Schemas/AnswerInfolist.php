@@ -18,9 +18,11 @@ class AnswerInfolist
                         TextEntry::make('question.question_text')
                             ->label('Question'),
                         TextEntry::make('answer_text')
-                            ->label('Answer Text'),
+                            ->label('Answer Text')
+                            ->html(),
                         TextEntry::make('explanation')
-                            ->label('Explanation'),
+                            ->label('Explanation')
+                            ->html(),
                         TextEntry::make('is_correct')
                             ->label('Correct Answer'),
                     ]),
