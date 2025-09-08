@@ -12,6 +12,8 @@ use App\Models\Answer;
 use App\Models\Feedback;
 use App\Models\FeedbackMedia;
 use App\Models\AnswerMedia;
+use App\Models\Setting;
+use App\Models\TokenUsage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -192,6 +194,120 @@ class AssessmentController extends Controller
             'success' => true,
             'data' => $assessments
         ]);
+    }
+
+    /**
+     * Start an assessment (deduct tokens and create attempt record)
+     */
+    public function startAssessment(Request $request, Assessment $assessment)
+    {
+        $user = $request->user();
+
+        // Check if user is a student
+        if (!$user->isStudent()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only students can start assessments'
+            ], 403);
+        }
+
+        // Check if assessment has questions
+        if (!$assessment->questions()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Assessment not found or has no questions'
+            ], 404);
+        }
+
+        // Check if user already has an attempt for this assessment
+        $existingAttempt = AssessmentAttempt::where('assessment_id', $assessment->id)
+            ->where('student_id', $user->id)
+            ->first();
+
+        if ($existingAttempt) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You have already started this assessment',
+                'data' => [
+                    'attempt_id' => $existingAttempt->id,
+                    'started_at' => $existingAttempt->started_at
+                ]
+            ], 409);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Get tokens per assessment setting
+            $tokensPerAssessment = Setting::getValue('tokens_per_assessment', 1);
+            
+            // Get user's wallet
+            $wallet = $user->wallet;
+            if (!$wallet) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Wallet not found. Please contact support.'
+                ], 500);
+            }
+
+            // Check if user has sufficient tokens
+            if (!$wallet->hasSufficientBalance($tokensPerAssessment)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient tokens. You need ' . $tokensPerAssessment . ' tokens to start this assessment.',
+                    'data' => [
+                        'required_tokens' => $tokensPerAssessment,
+                        'current_balance' => $wallet->balance
+                    ]
+                ], 400);
+            }
+
+            // Deduct tokens from wallet
+            $deducted = $wallet->deductTokens($tokensPerAssessment);
+            if (!$deducted) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to deduct tokens. Please try again.'
+                ], 500);
+            }
+
+            // Create assessment attempt
+            $attempt = AssessmentAttempt::create([
+                'assessment_id' => $assessment->id,
+                'student_id' => $user->id,
+                'started_at' => now(),
+                'completed_at' => null,
+                'score' => null
+            ]);
+
+            // Record token usage
+            TokenUsage::create([
+                'attempt_id' => $attempt->id,
+                'tokens_used' => $tokensPerAssessment
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Assessment started successfully',
+                'data' => [
+                    'attempt_id' => $attempt->id,
+                    'started_at' => $attempt->started_at,
+                    'tokens_deducted' => $tokensPerAssessment,
+                    'remaining_balance' => $wallet->fresh()->balance
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to start assessment',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

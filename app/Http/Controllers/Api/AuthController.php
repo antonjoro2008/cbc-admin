@@ -59,7 +59,7 @@ class AuthController extends Controller
 
             // Load user with relationships
             $user->load('institution');
-            
+
             // Add mpesa_phone to user data
             $userData = $user->toArray();
             $userData['mpesa_phone'] = $user->mpesa_phone;
@@ -140,7 +140,7 @@ class AuthController extends Controller
 
             // Load user with relationships
             $user->load('institution');
-            
+
             // Add mpesa_phone to user data (from institution)
             $userData = $user->toArray();
             $userData['mpesa_phone'] = $institution->mpesa_phone;
@@ -249,10 +249,10 @@ class AuthController extends Controller
     public function refresh(Request $request)
     {
         $user = $request->user();
-        
+
         // Revoke current token
         $user->currentAccessToken()->delete();
-        
+
         // Create new token
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -271,14 +271,12 @@ class AuthController extends Controller
      */
     private function getDashboardData($user)
     {
-        $dashboardController = new \App\Http\Controllers\Api\DashboardController();
-        
         // Get assessment statistics
         $assessmentStats = $this->getAssessmentStats($user);
-        
+
         // Get recent assessments
         $recentAssessments = $this->getRecentAssessments($user);
-        
+
         // Get recent attempts
         $recentAttempts = $this->getRecentAttempts($user);
 
@@ -296,16 +294,17 @@ class AuthController extends Controller
     private function getAssessmentStats($user)
     {
         $attempts = \App\Models\AssessmentAttempt::where('student_id', $user->id);
-        
+
         $totalAttempts = $attempts->count();
         $completedAttempts = $attempts->whereNotNull('completed_at')->count();
         $inProgressAttempts = $attempts->whereNull('completed_at')->count();
-        
-        $averageScore = \App\Models\AssessmentAttempt::where('student_id', $user->id)
+
+        $averageScoreRaw = \App\Models\AssessmentAttempt::where('student_id', $user->id)
             ->whereNotNull('score')
             ->avg('score') ?? 0;
+        $averageScore = ($averageScoreRaw / $totalAttempts) * 100;
 
-        $totalTokensUsed = \App\Models\TokenUsage::whereHas('attempt', function($query) use ($user) {
+        $totalTokensUsed = \App\Models\TokenUsage::whereHas('attempt', function ($query) use ($user) {
             $query->where('student_id', $user->id);
         })->sum('tokens_used');
 
@@ -313,7 +312,7 @@ class AuthController extends Controller
             'total_attempts' => $totalAttempts,
             'completed_attempts' => $completedAttempts,
             'in_progress_attempts' => $inProgressAttempts,
-            'average_score' => round($averageScore, 2),
+            'average_score' => round($averageScore),
             'total_tokens_used' => $totalTokensUsed,
             'completion_rate' => $totalAttempts > 0 ? round(($completedAttempts / $totalAttempts) * 100, 2) : 0,
         ];
@@ -325,22 +324,22 @@ class AuthController extends Controller
     private function getRecentAssessments($user)
     {
         if ($user->isStudent()) {
-            $assessments = \App\Models\Assessment::whereHas('attempts', function($query) use ($user) {
+            $assessments = \App\Models\Assessment::whereHas('attempts', function ($query) use ($user) {
                 $query->where('student_id', $user->id);
             })
-            ->orWhere('created_by', $user->id)
-            ->with(['subject', 'creator'])
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
+                ->orWhere('created_by', $user->id)
+                ->with(['subject', 'creator'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
         } elseif ($user->isInstitution()) {
-            $assessments = \App\Models\Assessment::whereHas('creator', function($query) use ($user) {
+            $assessments = \App\Models\Assessment::whereHas('creator', function ($query) use ($user) {
                 $query->where('institution_id', $user->institution_id);
             })
-            ->with(['subject', 'creator'])
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
+                ->with(['subject', 'creator'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
         } else {
             $assessments = \App\Models\Assessment::with(['subject', 'creator'])
                 ->orderBy('created_at', 'desc')
@@ -363,13 +362,13 @@ class AuthController extends Controller
                 ->limit(10)
                 ->get();
         } elseif ($user->isInstitution()) {
-            $attempts = \App\Models\AssessmentAttempt::whereHas('student', function($query) use ($user) {
+            $attempts = \App\Models\AssessmentAttempt::whereHas('student', function ($query) use ($user) {
                 $query->where('institution_id', $user->institution_id);
             })
-            ->with(['assessment.subject', 'student'])
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
+                ->with(['assessment.subject', 'student'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
         } else {
             $attempts = \App\Models\AssessmentAttempt::with(['assessment.subject', 'student'])
                 ->orderBy('created_at', 'desc')
