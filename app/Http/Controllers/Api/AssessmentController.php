@@ -225,14 +225,35 @@ class AssessmentController extends Controller
             ->first();
 
         if ($existingAttempt) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You have already started this assessment',
-                'data' => [
-                    'attempt_id' => $existingAttempt->id,
-                    'started_at' => $existingAttempt->started_at
-                ]
-            ], 409);
+            // Check if the attempt is completed or in progress
+            if ($existingAttempt->isCompleted()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You have already completed this assessment',
+                    'data' => [
+                        'attempt_id' => $existingAttempt->id,
+                        'started_at' => $existingAttempt->started_at,
+                        'completed_at' => $existingAttempt->completed_at,
+                        'score' => $existingAttempt->score,
+                        'status' => 'completed'
+                    ]
+                ], 409);
+            } else {
+                // Assessment is in progress, allow access
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Assessment is already in progress',
+                    'data' => [
+                        'attempt_id' => $existingAttempt->id,
+                        'started_at' => $existingAttempt->started_at,
+                        'completed_at' => $existingAttempt->completed_at,
+                        'score' => $existingAttempt->score,
+                        'status' => 'in_progress',
+                        'tokens_deducted' => 0, // No new tokens deducted
+                        'remaining_balance' => $user->wallet->balance ?? 0
+                    ]
+                ]);
+            }
         }
 
         try {
@@ -294,6 +315,9 @@ class AssessmentController extends Controller
                 'data' => [
                     'attempt_id' => $attempt->id,
                     'started_at' => $attempt->started_at,
+                    'completed_at' => $attempt->completed_at,
+                    'score' => $attempt->score,
+                    'status' => 'in_progress',
                     'tokens_deducted' => $tokensPerAssessment,
                     'remaining_balance' => $wallet->fresh()->balance
                 ]
