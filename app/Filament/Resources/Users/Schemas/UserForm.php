@@ -15,6 +15,7 @@ class UserForm
         return $schema
             ->components([
                 Grid::make(2)
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('name')
                             ->label('Name')
@@ -25,6 +26,7 @@ class UserForm
                             ->required(),
                     ]),
                 Grid::make(2)
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('phone')
                             ->label('Phone'),
@@ -40,6 +42,7 @@ class UserForm
                             ->required(),
                     ]),
                 Grid::make(2)
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('password')
                             ->label('Password')
@@ -51,6 +54,7 @@ class UserForm
                             ->required(),
                     ]),
                 Toggle::make('is_active')
+                    ->columnSpanFull()
                     ->label('Active')
                     ->default(true),
             ]);
