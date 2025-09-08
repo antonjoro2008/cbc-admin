@@ -18,6 +18,7 @@ class AssessmentsTable
         return $table
             ->columns([
                 TextColumn::make('title')
+                    ->wrap()
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('subject.name')
