@@ -65,6 +65,9 @@ class VAssessmentAttemptsReportsTable
             ])
             ->headerActions([
                 ExportAction::make()
+                    ->label('Export to CSV')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('primary')
                     ->exporter(VAssessmentAttemptsReportExporter::class),
             ])
             ->paginated();
