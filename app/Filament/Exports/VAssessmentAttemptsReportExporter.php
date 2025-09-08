@@ -15,8 +15,6 @@ class VAssessmentAttemptsReportExporter extends Exporter
     public static function getColumns(): array
     {
         return [
-            ExportColumn::make('id')
-                ->label('ID'),
             ExportColumn::make('student_id'),
             ExportColumn::make('student_name'),
             ExportColumn::make('assessment_id'),
@@ -25,8 +23,8 @@ class VAssessmentAttemptsReportExporter extends Exporter
             ExportColumn::make('attempt1_percentage'),
             ExportColumn::make('attempt2_score'),
             ExportColumn::make('attempt2_percentage'),
-            ExportColumn::make('attempt3_score'),
-            ExportColumn::make('attempt3_percentage'),
+            // ExportColumn::make('attempt3_score'),
+            // ExportColumn::make('attempt3_percentage'),
             ExportColumn::make('average_score'),
             ExportColumn::make('average_percentage'),
         ];
