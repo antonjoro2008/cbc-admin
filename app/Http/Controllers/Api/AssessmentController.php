@@ -61,6 +61,15 @@ class AssessmentController extends Controller
 
         $assessments = $query->paginate($request->get('per_page', 20));
 
+        // Get token cost per assessment from settings
+        $tokenCostPerAssessment = Setting::getValue('tokens_per_assessment', 1);
+
+        // Add token cost to each assessment
+        $assessments->getCollection()->transform(function ($assessment) use ($tokenCostPerAssessment) {
+            $assessment->token_cost = $tokenCostPerAssessment;
+            return $assessment;
+        });
+
         return response()->json([
             'success' => true,
             'data' => $assessments
