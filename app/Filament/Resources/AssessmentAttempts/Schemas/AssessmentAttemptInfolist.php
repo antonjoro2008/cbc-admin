@@ -43,8 +43,7 @@ class AssessmentAttemptInfolist
                                 TextEntry::make('status')
                                     ->label('Status'),
                                 TextEntry::make('is_active')
-                                    ->label('Active')
-                                    ->boolean(),
+                                    ->label('Active'),
                             ]),
                     ]),
                 Section::make('Timestamps')
