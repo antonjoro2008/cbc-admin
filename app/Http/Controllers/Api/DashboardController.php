@@ -104,11 +104,8 @@ class DashboardController extends Controller
         $completedAttempts = $attempts->whereNotNull('completed_at')->count();
         $inProgressAttempts = $attempts->whereNull('completed_at')->count();
         
-        $averageScoreRaw = AssessmentAttempt::where('student_id', $user->id)
-            ->whereNotNull('score')
-            ->avg('score') ?? 0;
-
-        $averageScore = ($averageScoreRaw / $totalAttempts) * 100;
+        // Calculate average score based on marked questions only
+        $averageScore = $this->calculateAverageScore($user->id);
 
         $totalTokensUsed = TokenUsage::whereHas('attempt', function($query) use ($user) {
             $query->where('student_id', $user->id);
@@ -186,5 +183,31 @@ class DashboardController extends Controller
         }
 
         return $attempts;
+    }
+
+    /**
+     * Calculate average score based on marked questions only
+     */
+    private function calculateAverageScore($userId)
+    {
+        // Get all attempt answers that have feedback (meaning they were marked)
+        $markedAttemptAnswers = \App\Models\AttemptAnswer::whereHas('attempt', function ($query) use ($userId) {
+            $query->where('student_id', $userId);
+        })
+        ->whereHas('feedback')
+        ->with(['question', 'feedback']);
+
+        $totalMarksAwarded = $markedAttemptAnswers->sum('marks_awarded');
+        
+        // Get total possible marks for questions that were marked
+        $totalPossibleMarks = $markedAttemptAnswers->get()->sum(function ($attemptAnswer) {
+            return $attemptAnswer->question->marks;
+        });
+
+        if ($totalPossibleMarks > 0) {
+            return round(($totalMarksAwarded / $totalPossibleMarks) * 100, 2);
+        }
+
+        return 0;
     }
 }
