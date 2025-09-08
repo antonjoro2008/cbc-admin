@@ -11,6 +11,7 @@ class VAssessmentAttemptsReport extends Model
 {
 
     protected $table = 'v_assessment_attempts_report';
+    public $timestamps = false;
 
-    protected $guarded = [];
+    protected $guarded = ['id'];
 }
