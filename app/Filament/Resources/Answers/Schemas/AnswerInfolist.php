@@ -22,8 +22,7 @@ class AnswerInfolist
                         TextEntry::make('explanation')
                             ->label('Explanation'),
                         TextEntry::make('is_correct')
-                            ->label('Correct Answer')
-                            ->boolean(),
+                            ->label('Correct Answer'),
                     ]),
                 Section::make('Timestamps')
                     ->schema([
