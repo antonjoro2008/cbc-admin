@@ -39,8 +39,16 @@ class AssessmentAttemptsTable
                     ->label('Score')
                     ->sortable(),
                 TextColumn::make('total_marks')
-                    ->label('Total Marks')
-                    ->sortable(),
+                    ->label('Total Marks (Auto-marked)')
+                    ->getStateUsing(function ($record) {
+                        // Get total marks for auto-marked questions only
+                        $totalMarks = $record->assessment->questions()
+                            ->whereIn('question_type', ['mcq', 'true_false', 'matching', 'fill_blank'])
+                            ->sum('marks');
+                        
+                        return $totalMarks ?: 'N/A';
+                    })
+                    ->sortable(false), // Can't sort computed columns
                 TextColumn::make('started_at')
                     ->label('Started At')
                     ->dateTime('d/m/Y H:iA')
@@ -92,7 +100,6 @@ class AssessmentAttemptsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
                     BulkAction::make('export_csv')
                         ->label('Export to CSV')
                         ->icon('heroicon-o-document-arrow-down')
@@ -112,6 +119,11 @@ class AssessmentAttemptsTable
         $filename = 'assessment_attempts_' . now()->format('Y-m-d_H-i-s') . '.csv';
         
         $data = $records->map(function ($record) {
+            // Calculate total marks for auto-marked questions only
+            $totalMarks = $record->assessment->questions()
+                ->whereIn('question_type', ['mcq', 'true_false', 'matching', 'fill_blank'])
+                ->sum('marks');
+            
             return [
                 'Student Name' => $record->student->name ?? 'N/A',
                 'Student Email' => $record->student->email ?? 'N/A',
@@ -119,7 +131,7 @@ class AssessmentAttemptsTable
                 'Assessment Title' => $record->assessment->title ?? 'N/A',
                 'Attempt Number' => $record->attempt_number ?? 'N/A',
                 'Score' => $record->score ?? 'N/A',
-                'Total Marks' => $record->total_marks ?? 'N/A',
+                'Total Marks (Auto-marked)' => $totalMarks ?: 'N/A',
                 'Started At' => $record->started_at ? $record->started_at->format('d/m/Y H:i A') : 'N/A',
                 'Completed At' => $record->completed_at ? $record->completed_at->format('d/m/Y H:i A') : 'N/A',
                 'Status' => $record->completed_at ? 'Completed' : 'In Progress',
@@ -127,7 +139,7 @@ class AssessmentAttemptsTable
             ];
         });
 
-        $csvContent = "Student Name,Student Email,Institution,Assessment Title,Attempt Number,Score,Total Marks,Started At,Completed At,Status,Duration (minutes)\n";
+        $csvContent = "Student Name,Student Email,Institution,Assessment Title,Attempt Number,Score,Total Marks (Auto-marked),Started At,Completed At,Status,Duration (minutes)\n";
         
         foreach ($data as $row) {
             $csvContent .= '"' . implode('","', $row) . '"' . "\n";
