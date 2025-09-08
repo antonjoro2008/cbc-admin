@@ -104,9 +104,11 @@ class DashboardController extends Controller
         $completedAttempts = $attempts->whereNotNull('completed_at')->count();
         $inProgressAttempts = $attempts->whereNull('completed_at')->count();
         
-        $averageScore = AssessmentAttempt::where('student_id', $user->id)
+        $averageScoreRaw = AssessmentAttempt::where('student_id', $user->id)
             ->whereNotNull('score')
             ->avg('score') ?? 0;
+
+        $averageScore = ($averageScoreRaw / $totalAttempts) * 100;
 
         $totalTokensUsed = TokenUsage::whereHas('attempt', function($query) use ($user) {
             $query->where('student_id', $user->id);
