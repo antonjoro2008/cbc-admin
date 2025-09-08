@@ -46,10 +46,10 @@ class QuestionsTable
                 TextColumn::make('marks')
                     ->label('Marks')
                     ->sortable(),
-                TextColumn::make('parentQuestion.question_text')
-                    ->label('Parent Question')
-                    ->limit(50)
-                    ->searchable(),
+                // TextColumn::make('parentQuestion.question_text')
+                //     ->label('Parent Question')
+                //     ->limit(50)
+                //     ->searchable(),
             ])
             ->filters([
                 //
