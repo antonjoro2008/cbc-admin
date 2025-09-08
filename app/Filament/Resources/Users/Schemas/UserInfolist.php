@@ -16,6 +16,7 @@ class UserInfolist
                 Section::make('User Information')
                     ->schema([
                         Grid::make(2)
+                            ->columnSpanFull()
                             ->schema([
                                 TextEntry::make('name')
                                     ->label('Name'),
@@ -23,6 +24,7 @@ class UserInfolist
                                     ->label('Email'),
                             ]),
                         Grid::make(3)
+                            ->columnSpanFull()
                             ->schema([
                                 TextEntry::make('phone')
                                     ->label('Phone'),
@@ -33,11 +35,12 @@ class UserInfolist
                             ]),
                         TextEntry::make('is_active')
                             ->label('Active')
-                            ->boolean(),
+                            ->columnSpanFull(),
                     ]),
                 Section::make('Timestamps')
                     ->schema([
                         Grid::make(2)
+                            ->columnSpanFull()
                             ->schema([
                                 TextEntry::make('created_at')
                                     ->label('Created At')
