@@ -93,14 +93,6 @@ class AssessmentAttemptsTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    BulkAction::make('export_excel')
-                        ->label('Export to Excel')
-                        ->icon('heroicon-o-document-arrow-down')
-                        ->action(function (Collection $records) {
-                            return self::exportToExcel($records);
-                        })
-                        ->deselectRecordsAfterCompletion(),
-                    
                     BulkAction::make('export_csv')
                         ->label('Export to CSV')
                         ->icon('heroicon-o-document-arrow-down')
@@ -110,44 +102,6 @@ class AssessmentAttemptsTable
                         ->deselectRecordsAfterCompletion(),
                 ]),
             ]);
-    }
-
-    /**
-     * Export records to Excel format
-     */
-    public static function exportToExcel(Collection $records)
-    {
-        $filename = 'assessment_attempts_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-        
-        $data = $records->map(function ($record) {
-            return [
-                'Student Name' => $record->student->name ?? 'N/A',
-                'Student Email' => $record->student->email ?? 'N/A',
-                'Institution' => $record->student->institution->name ?? 'N/A',
-                'Assessment Title' => $record->assessment->title ?? 'N/A',
-                'Attempt Number' => $record->attempt_number ?? 'N/A',
-                'Score' => $record->score ?? 'N/A',
-                'Total Marks' => $record->total_marks ?? 'N/A',
-                'Started At' => $record->started_at ? $record->started_at->format('d/m/Y H:i A') : 'N/A',
-                'Completed At' => $record->completed_at ? $record->completed_at->format('d/m/Y H:i A') : 'N/A',
-                'Status' => $record->completed_at ? 'Completed' : 'In Progress',
-                'Duration (minutes)' => $record->getDurationInMinutes() ?? 'N/A',
-            ];
-        });
-
-        // Create a simple CSV-like response for Excel
-        $csvContent = "Student Name,Student Email,Institution,Assessment Title,Attempt Number,Score,Total Marks,Started At,Completed At,Status,Duration (minutes)\n";
-        
-        foreach ($data as $row) {
-            $csvContent .= '"' . implode('","', $row) . '"' . "\n";
-        }
-
-        return response()->streamDownload(function () use ($csvContent) {
-            echo $csvContent;
-        }, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ]);
     }
 
     /**
