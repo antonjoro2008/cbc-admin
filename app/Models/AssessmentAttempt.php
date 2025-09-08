@@ -19,6 +19,7 @@ class AssessmentAttempt extends Model
     protected $fillable = [
         'assessment_id',
         'student_id',
+        'attempt_number',
         'started_at',
         'completed_at',
         'score',

@@ -229,41 +229,47 @@ class AssessmentController extends Controller
             ], 404);
         }
 
-        // Check if user already has an attempt for this assessment
-        $existingAttempt = AssessmentAttempt::where('assessment_id', $assessment->id)
+        // Get maximum number of attempts allowed
+        $maxAttempts = Setting::getValue('max_number_of_assessment_attempts', 3);
+        
+        // Check existing attempts for this student and assessment
+        $existingAttempts = AssessmentAttempt::where('assessment_id', $assessment->id)
             ->where('student_id', $user->id)
-            ->first();
+            ->orderBy('attempt_number', 'desc')
+            ->get();
 
-        if ($existingAttempt) {
-            // Check if the attempt is completed or in progress
-            if ($existingAttempt->isCompleted()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You have already completed this assessment',
-                    'data' => [
-                        'attempt_id' => $existingAttempt->id,
-                        'started_at' => $existingAttempt->started_at,
-                        'completed_at' => $existingAttempt->completed_at,
-                        'score' => $existingAttempt->score,
-                        'status' => 'completed'
-                    ]
-                ], 409);
-            } else {
-                // Assessment is in progress, allow access
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Assessment is already in progress',
-                    'data' => [
-                        'attempt_id' => $existingAttempt->id,
-                        'started_at' => $existingAttempt->started_at,
-                        'completed_at' => $existingAttempt->completed_at,
-                        'score' => $existingAttempt->score,
-                        'status' => 'in_progress',
-                        'tokens_deducted' => 0, // No new tokens deducted
-                        'remaining_balance' => $user->wallet->balance ?? 0
-                    ]
-                ]);
-            }
+        $totalAttempts = $existingAttempts->count();
+        $inProgressAttempt = $existingAttempts->whereNull('completed_at')->first();
+
+        // Check if user has reached maximum attempts
+        if ($totalAttempts >= $maxAttempts) {
+            return response()->json([
+                'success' => false,
+                'message' => "You have reached the maximum number of attempts ({$maxAttempts}) for this assessment",
+                'data' => [
+                    'max_attempts' => $maxAttempts,
+                    'current_attempts' => $totalAttempts,
+                    'status' => 'max_attempts_reached'
+                ]
+            ], 409);
+        }
+
+        // Check if there's an attempt in progress
+        if ($inProgressAttempt) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Assessment is already in progress',
+                'data' => [
+                    'attempt_id' => $inProgressAttempt->id,
+                    'attempt_number' => $inProgressAttempt->attempt_number,
+                    'started_at' => $inProgressAttempt->started_at,
+                    'completed_at' => $inProgressAttempt->completed_at,
+                    'score' => $inProgressAttempt->score,
+                    'status' => 'in_progress',
+                    'tokens_deducted' => 0, // No new tokens deducted
+                    'remaining_balance' => $user->wallet->balance ?? 0
+                ]
+            ]);
         }
 
         try {
@@ -302,10 +308,14 @@ class AssessmentController extends Controller
                 ], 500);
             }
 
+            // Calculate next attempt number
+            $nextAttemptNumber = $totalAttempts + 1;
+
             // Create assessment attempt
             $attempt = AssessmentAttempt::create([
                 'assessment_id' => $assessment->id,
                 'student_id' => $user->id,
+                'attempt_number' => $nextAttemptNumber,
                 'started_at' => now(),
                 'completed_at' => null,
                 'score' => null
@@ -324,6 +334,7 @@ class AssessmentController extends Controller
                 'message' => 'Assessment started successfully',
                 'data' => [
                     'attempt_id' => $attempt->id,
+                    'attempt_number' => $attempt->attempt_number,
                     'started_at' => $attempt->started_at,
                     'completed_at' => $attempt->completed_at,
                     'score' => $attempt->score,
@@ -381,18 +392,24 @@ class AssessmentController extends Controller
             $submissionData = $request->submission_data;
             $answers = $submissionData['answers'];
 
-            // Get or create assessment attempt
-            $attempt = AssessmentAttempt::updateOrCreate(
-                [
-                    'assessment_id' => $assessmentId,
-                    'student_id' => $userId
-                ],
-                [
-                    'started_at' => $submissionData['start_time'],
-                    'completed_at' => $submissionData['end_time'],
-                    'score' => 0 // Will be calculated later
-                ]
-            );
+            // Find the in-progress attempt for this student and assessment
+            $attempt = AssessmentAttempt::where('assessment_id', $assessmentId)
+                ->where('student_id', $userId)
+                ->whereNull('completed_at')
+                ->first();
+
+            if (!$attempt) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active attempt found for this assessment'
+                ], 404);
+            }
+
+            // Update the attempt with completion data
+            $attempt->update([
+                'completed_at' => $submissionData['end_time'],
+                'score' => 0 // Will be calculated later
+            ]);
 
             $totalQuestions = $submissionData['total_questions'];
             $questionsAnswered = $submissionData['questions_answered'];

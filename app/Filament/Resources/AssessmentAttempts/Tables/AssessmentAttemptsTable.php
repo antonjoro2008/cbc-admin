@@ -8,7 +8,15 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Actions\BulkAction;
 use Filament\Tables\Table;
+use App\Models\Assessment;
+use App\Models\User;
+use App\Models\Institution;
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Collection;
 
 class AssessmentAttemptsTable
 {
@@ -24,16 +32,9 @@ class AssessmentAttemptsTable
                     ->label('Assessment')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('status')
-                    ->label('Status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'completed' => 'success',
-                        'in_progress' => 'warning',
-                        'abandoned' => 'danger',
-                        'timeout' => 'gray',
-                        default => 'gray',
-                    }),
+                TextColumn::make('attempt_number')
+                    ->label('Attempt Number')
+                    ->sortable(),
                 TextColumn::make('score')
                     ->label('Score')
                     ->sortable(),
@@ -42,25 +43,48 @@ class AssessmentAttemptsTable
                     ->sortable(),
                 TextColumn::make('started_at')
                     ->label('Started At')
-                    ->dateTime()
+                    ->dateTime('d/m/Y H:iA')
                     ->sortable(),
                 TextColumn::make('completed_at')
                     ->label('Completed At')
-                    ->dateTime()
+                    ->dateTime('d/m/Y H:iA')
                     ->sortable(),
-                ToggleColumn::make('is_active')
-                    ->label('Active'),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('attempt_number')
+                    ->label('Attempt Number')
+                    ->options([
+                        1 => 'Attempt 1',
+                        2 => 'Attempt 2',
+                        3 => 'Attempt 3',
+                    ])
+                    ->multiple(),
+                
+                SelectFilter::make('assessment_id')
+                    ->label('Assessment')
+                    ->relationship('assessment', 'title')
+                    ->searchable()
+                    ->preload(),
+                
+                SelectFilter::make('student_id')
+                    ->label('Student')
+                    ->relationship('student', 'name')
+                    ->searchable()
+                    ->preload(),
+                
+                SelectFilter::make('institution_id')
+                    ->label('Institution')
+                    ->relationship('student.institution', 'name')
+                    ->searchable()
+                    ->preload(),
+                
+                Filter::make('completed')
+                    ->label('Completed Attempts')
+                    ->query(fn ($query) => $query->whereNotNull('completed_at')),
+                
+                Filter::make('in_progress')
+                    ->label('In Progress Attempts')
+                    ->query(fn ($query) => $query->whereNull('completed_at')),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -69,7 +93,97 @@ class AssessmentAttemptsTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
+                    BulkAction::make('export_excel')
+                        ->label('Export to Excel')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->action(function (Collection $records) {
+                            return self::exportToExcel($records);
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    
+                    BulkAction::make('export_csv')
+                        ->label('Export to CSV')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->action(function (Collection $records) {
+                            return self::exportToCSV($records);
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ]);
+    }
+
+    /**
+     * Export records to Excel format
+     */
+    public static function exportToExcel(Collection $records)
+    {
+        $filename = 'assessment_attempts_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        
+        $data = $records->map(function ($record) {
+            return [
+                'Student Name' => $record->student->name ?? 'N/A',
+                'Student Email' => $record->student->email ?? 'N/A',
+                'Institution' => $record->student->institution->name ?? 'N/A',
+                'Assessment Title' => $record->assessment->title ?? 'N/A',
+                'Attempt Number' => $record->attempt_number ?? 'N/A',
+                'Score' => $record->score ?? 'N/A',
+                'Total Marks' => $record->total_marks ?? 'N/A',
+                'Started At' => $record->started_at ? $record->started_at->format('d/m/Y H:i A') : 'N/A',
+                'Completed At' => $record->completed_at ? $record->completed_at->format('d/m/Y H:i A') : 'N/A',
+                'Status' => $record->completed_at ? 'Completed' : 'In Progress',
+                'Duration (minutes)' => $record->getDurationInMinutes() ?? 'N/A',
+            ];
+        });
+
+        // Create a simple CSV-like response for Excel
+        $csvContent = "Student Name,Student Email,Institution,Assessment Title,Attempt Number,Score,Total Marks,Started At,Completed At,Status,Duration (minutes)\n";
+        
+        foreach ($data as $row) {
+            $csvContent .= '"' . implode('","', $row) . '"' . "\n";
+        }
+
+        return response()->streamDownload(function () use ($csvContent) {
+            echo $csvContent;
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
+     * Export records to CSV format
+     */
+    public static function exportToCSV(Collection $records)
+    {
+        $filename = 'assessment_attempts_' . now()->format('Y-m-d_H-i-s') . '.csv';
+        
+        $data = $records->map(function ($record) {
+            return [
+                'Student Name' => $record->student->name ?? 'N/A',
+                'Student Email' => $record->student->email ?? 'N/A',
+                'Institution' => $record->student->institution->name ?? 'N/A',
+                'Assessment Title' => $record->assessment->title ?? 'N/A',
+                'Attempt Number' => $record->attempt_number ?? 'N/A',
+                'Score' => $record->score ?? 'N/A',
+                'Total Marks' => $record->total_marks ?? 'N/A',
+                'Started At' => $record->started_at ? $record->started_at->format('d/m/Y H:i A') : 'N/A',
+                'Completed At' => $record->completed_at ? $record->completed_at->format('d/m/Y H:i A') : 'N/A',
+                'Status' => $record->completed_at ? 'Completed' : 'In Progress',
+                'Duration (minutes)' => $record->getDurationInMinutes() ?? 'N/A',
+            ];
+        });
+
+        $csvContent = "Student Name,Student Email,Institution,Assessment Title,Attempt Number,Score,Total Marks,Started At,Completed At,Status,Duration (minutes)\n";
+        
+        foreach ($data as $row) {
+            $csvContent .= '"' . implode('","', $row) . '"' . "\n";
+        }
+
+        return response()->streamDownload(function () use ($csvContent) {
+            echo $csvContent;
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }

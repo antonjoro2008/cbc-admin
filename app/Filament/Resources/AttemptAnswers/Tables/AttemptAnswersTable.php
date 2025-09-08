@@ -16,12 +16,12 @@ class AttemptAnswersTable
     {
         return $table
             ->columns([
-                TextColumn::make('question.question_text')
-                    ->label('Question')
-                    ->html()
-                    ->wrap()
-                    ->searchable()
-                    ->limit(100),
+                // TextColumn::make('question.question_text')
+                //     ->label('Question')
+                //     ->html()
+                //     ->wrap()
+                //     ->searchable()
+                //     ->limit(40),
                 TextColumn::make('assessment_attempt.id')
                     ->label('Attempt ID')
                     ->sortable(),

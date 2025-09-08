@@ -47,9 +47,10 @@ class AuthController extends Controller
             ]);
 
             // Create wallet for the user
+            // TODO: Remove this temporary feature - crediting new accounts with 20 tokens
             Wallet::create([
                 'user_id' => $user->id,
-                'balance' => 0,
+                'balance' => 20, // Temporary: credit new individual accounts with 20 tokens
             ]);
 
             $token = $user->createToken('auth_token')->plainTextToken;
