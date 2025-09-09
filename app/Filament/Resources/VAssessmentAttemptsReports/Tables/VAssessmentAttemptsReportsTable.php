@@ -30,7 +30,7 @@ class VAssessmentAttemptsReportsTable
         ];
 
         for ($i = 1; $i <= $maxAttempts; $i++) {
-            $columns[] = TextColumn::make("attempt{$i}_score")->label("Attempt {$i} Score")->numeric();
+            // $columns[] = TextColumn::make("attempt{$i}_score")->label("Attempt {$i} Score")->numeric();
             $columns[] = TextColumn::make("attempt{$i}_percentage")->label("Attempt {$i} %")->numeric();
         }
 
@@ -51,7 +51,7 @@ class VAssessmentAttemptsReportsTable
                     })
                     ->searchable()
                     ->multiple(),
-                
+
                 SelectFilter::make('assessment_name')
                     ->label('Assessment')
                     ->options(function () {
