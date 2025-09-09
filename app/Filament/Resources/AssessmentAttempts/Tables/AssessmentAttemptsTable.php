@@ -24,8 +24,8 @@ class AssessmentAttemptsTable
     {
         return $table
             ->columns([
-                TextColumn::make('user.name')
-                    ->label('User')
+                TextColumn::make('student.name')
+                    ->label('Student')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('assessment.title')
@@ -45,7 +45,7 @@ class AssessmentAttemptsTable
                         $totalMarks = $record->assessment->questions()
                             ->whereIn('question_type', ['mcq', 'true_false', 'matching', 'fill_blank'])
                             ->sum('marks');
-                        
+
                         return $totalMarks ?: 'N/A';
                     })
                     ->sortable(false), // Can't sort computed columns
@@ -67,32 +67,32 @@ class AssessmentAttemptsTable
                         3 => 'Attempt 3',
                     ])
                     ->multiple(),
-                
+
                 SelectFilter::make('assessment_id')
                     ->label('Assessment')
                     ->relationship('assessment', 'title')
                     ->searchable()
                     ->preload(),
-                
+
                 SelectFilter::make('student_id')
                     ->label('Student')
                     ->relationship('student', 'name')
                     ->searchable()
                     ->preload(),
-                
+
                 SelectFilter::make('institution_id')
                     ->label('Institution')
                     ->relationship('student.institution', 'name')
                     ->searchable()
                     ->preload(),
-                
+
                 Filter::make('completed')
                     ->label('Completed Attempts')
-                    ->query(fn ($query) => $query->whereNotNull('completed_at')),
-                
+                    ->query(fn($query) => $query->whereNotNull('completed_at')),
+
                 Filter::make('in_progress')
                     ->label('In Progress Attempts')
-                    ->query(fn ($query) => $query->whereNull('completed_at')),
+                    ->query(fn($query) => $query->whereNull('completed_at')),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -117,13 +117,13 @@ class AssessmentAttemptsTable
     public static function exportToCSV(Collection $records)
     {
         $filename = 'assessment_attempts_' . now()->format('Y-m-d_H-i-s') . '.csv';
-        
+
         $data = $records->map(function ($record) {
             // Calculate total marks for auto-marked questions only
             $totalMarks = $record->assessment->questions()
                 ->whereIn('question_type', ['mcq', 'true_false', 'matching', 'fill_blank'])
                 ->sum('marks');
-            
+
             return [
                 'Student Name' => $record->student->name ?? 'N/A',
                 'Student Email' => $record->student->email ?? 'N/A',
@@ -140,7 +140,7 @@ class AssessmentAttemptsTable
         });
 
         $csvContent = "Student Name,Student Email,Institution,Assessment Title,Attempt Number,Score,Total Marks (Auto-marked),Started At,Completed At,Status,Duration (minutes)\n";
-        
+
         foreach ($data as $row) {
             $csvContent .= '"' . implode('","', $row) . '"' . "\n";
         }

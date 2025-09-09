@@ -19,18 +19,18 @@ class VAssessmentAttemptsReportExporter extends Exporter
                 ->label('Student Name'),
             ExportColumn::make('assessment_name')
                 ->label('Assessment Name'),
-            ExportColumn::make('attempt1_score')
-                ->label('Attempt 1 Score'),
+            // ExportColumn::make('attempt1_score')
+            //     ->label('Attempt 1 Score'),
             ExportColumn::make('attempt1_percentage')
                 ->label('Attempt 1 %'),
-            ExportColumn::make('attempt2_score')
-                ->label('Attempt 2 Score'),
+            // ExportColumn::make('attempt2_score')
+            //     ->label('Attempt 2 Score'),
             ExportColumn::make('attempt2_percentage')
                 ->label('Attempt 2 %'),
             // ExportColumn::make('attempt3_score'),
             // ExportColumn::make('attempt3_percentage'),
             ExportColumn::make('average_score')
-                ->label('Average Score')    ,
+                ->label('Average Score'),
             ExportColumn::make('average_percentage')
                 ->label('Average %'),
         ];
