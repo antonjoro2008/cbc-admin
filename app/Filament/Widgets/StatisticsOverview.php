@@ -99,18 +99,11 @@ class StatisticsOverview extends StatsOverviewWidget
      */
     private function getAverageScore(): string
     {
-        $markedAttemptAnswers = \App\Models\AttemptAnswer::whereHas('feedback')
-        ->with(['question', 'feedback']);
+        $averageScore = AssessmentAttempt::whereNotNull('score')
+            ->avg('score');
 
-        $totalMarksAwarded = $markedAttemptAnswers->sum('marks_awarded');
-        
-        // Get total possible marks for questions that were marked
-        $totalPossibleMarks = $markedAttemptAnswers->get()->sum(function ($attemptAnswer) {
-            return $attemptAnswer->question->marks;
-        });
-
-        if ($totalPossibleMarks > 0) {
-            return round(($totalMarksAwarded / $totalPossibleMarks) * 100, 2).'%';
+        if ($averageScore) {
+            return round($averageScore, 1) . '%';
         }
 
         return 'N/A';
