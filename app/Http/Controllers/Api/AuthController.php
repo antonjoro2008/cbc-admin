@@ -15,32 +15,35 @@ use Illuminate\Validation\Rules\Password;
 class AuthController extends Controller
 {
     /**
-     * Register a new student user
+     * Register a new user (student or parent)
      */
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'phone_number' => 'required|string|max:15|regex:/^254[0-9]{9}$/|unique:users',
+            'phone_number' => ['required', 'string', 'max:15', 'unique:users', function ($attribute, $value, $fail) {
+                if (!$this->isValidMpesaNumber($value)) {
+                    $fail('Phone number must be a valid M-Pesa number with supported prefix.');
+                }
+            }],
             'email' => 'nullable|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Password::defaults()],
-            'mpesa_phone' => 'required|string|max:15|regex:/^254[0-9]{9}$/',
             'institution_id' => 'nullable|exists:institutions,id',
             'grade_level' => 'nullable|string|max:50',
+            'user_type' => 'required|string|in:student,parent',
         ], [
             'name.required' => 'Your full name is required.',
             'name.max' => 'Your name cannot exceed 255 characters.',
             'phone_number.required' => 'Your phone number is required.',
-            'phone_number.regex' => 'Phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
             'phone_number.unique' => 'This phone number is already registered. Please use a different number or try logging in.',
             'email.email' => 'Please provide a valid email address.',
             'email.unique' => 'This email address is already registered. Please use a different email or try logging in.',
             'password.required' => 'A password is required.',
             'password.confirmed' => 'Password confirmation does not match.',
-            'mpesa_phone.required' => 'M-Pesa phone number is required for payments.',
-            'mpesa_phone.regex' => 'M-Pesa phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
             'institution_id.exists' => 'The selected institution does not exist.',
             'grade_level.max' => 'Grade level cannot exceed 50 characters.',
+            'user_type.required' => 'User type is required.',
+            'user_type.in' => 'User type must be either student or parent.',
         ]);
 
         if ($validator->fails()) {
@@ -57,10 +60,9 @@ class AuthController extends Controller
                 'phone_number' => $request->phone_number,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'mpesa_phone' => $request->mpesa_phone,
                 'institution_id' => $request->institution_id,
                 'grade_level' => $request->grade_level,
-                'user_type' => 'student',
+                'user_type' => $request->user_type,
             ]);
 
             // Create wallet for the user
@@ -78,13 +80,14 @@ class AuthController extends Controller
             // Load user with relationships
             $user->load('institution');
 
-            // Add mpesa_phone to user data
+            // Prepare user data
             $userData = $user->toArray();
-            $userData['mpesa_phone'] = $user->mpesa_phone;
 
+            $userTypeLabel = ucfirst($request->user_type);
+            
             return response()->json([
                 'success' => true,
-                'message' => 'Student registered successfully',
+                'message' => $userTypeLabel . ' registered successfully',
                 'data' => [
                     'user' => $userData,
                     'access_token' => $token,
@@ -112,9 +115,12 @@ class AuthController extends Controller
             'institution_email' => 'nullable|string|email|max:255|unique:institutions,email',
             'institution_phone' => 'required|string|max:20',
             'institution_address' => 'required|string|max:500',
-            'mpesa_phone' => 'required|string|max:15|regex:/^254[0-9]{9}$/',
             'admin_name' => 'required|string|max:255',
-            'admin_phone_number' => 'required|string|max:15|regex:/^254[0-9]{9}$/|unique:users,phone_number',
+            'admin_phone_number' => ['required', 'string', 'max:15', 'unique:users,phone_number', function ($attribute, $value, $fail) {
+                if (!$this->isValidMpesaNumber($value)) {
+                    $fail('Phone number must be a valid M-Pesa number with supported prefix.');
+                }
+            }],
             'admin_email' => 'nullable|string|email|max:255|unique:users,email',
             'admin_password' => ['required', 'confirmed', Password::defaults()],
         ], [
@@ -126,12 +132,9 @@ class AuthController extends Controller
             'institution_phone.max' => 'Institution phone number cannot exceed 20 characters.',
             'institution_address.required' => 'Institution address is required.',
             'institution_address.max' => 'Institution address cannot exceed 500 characters.',
-            'mpesa_phone.required' => 'M-Pesa phone number is required for payments.',
-            'mpesa_phone.regex' => 'M-Pesa phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
             'admin_name.required' => 'Admin name is required.',
             'admin_name.max' => 'Admin name cannot exceed 255 characters.',
             'admin_phone_number.required' => 'Admin phone number is required.',
-            'admin_phone_number.regex' => 'Admin phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
             'admin_phone_number.unique' => 'This admin phone number is already registered. Please use a different number.',
             'admin_email.email' => 'Please provide a valid admin email address.',
             'admin_email.unique' => 'This admin email is already registered. Please use a different email.',
@@ -154,7 +157,6 @@ class AuthController extends Controller
                 'email' => $request->institution_email,
                 'phone' => $request->institution_phone,
                 'address' => $request->institution_address,
-                'mpesa_phone' => $request->mpesa_phone,
             ]);
 
             // Create institution admin user
@@ -181,9 +183,8 @@ class AuthController extends Controller
             // Load user with relationships
             $user->load('institution');
 
-            // Add mpesa_phone to user data (from institution)
+            // Prepare user data
             $userData = $user->toArray();
-            $userData['mpesa_phone'] = $institution->mpesa_phone;
 
             return response()->json([
                 'success' => true,
@@ -212,11 +213,10 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|string|regex:/^254[0-9]{9}$/',
+            'login_identifier' => 'required|string',
             'password' => 'required|string',
         ], [
-            'phone_number.required' => 'Your phone number is required.',
-            'phone_number.regex' => 'Phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
+            'login_identifier.required' => 'Phone number or admission number is required.',
             'password.required' => 'Your password is required.',
         ]);
 
@@ -228,12 +228,15 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user = User::where('phone_number', $request->phone_number)->first();
+        // Try to find user by phone_number first, then by admission_number
+        $user = User::where('phone_number', $request->login_identifier)
+            ->orWhere('admission_number', $request->login_identifier)
+            ->first();
 
         if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'No account found with this phone number. Please check your phone number or register for a new account.'
+                'message' => 'No account found with this identifier. Please check your phone number/admission number or register for a new account.'
             ], 401);
         }
 
@@ -255,19 +258,8 @@ class AuthController extends Controller
         // Load user with relationships
         $user->load('institution', 'wallet');
 
-        // Get mpesa_phone based on user type
-        $mpesaPhone = null;
-        if ($user->isInstitution() && $user->institution) {
-            // For institution users, get mpesa_phone from institutions table
-            $mpesaPhone = $user->institution->mpesa_phone;
-        } else {
-            // For individual users (students), get mpesa_phone from users table
-            $mpesaPhone = $user->mpesa_phone;
-        }
-
-        // Add mpesa_phone to user data
+        // Prepare user data
         $userData = $user->toArray();
-        $userData['mpesa_phone'] = $mpesaPhone;
 
         return response()->json([
             'success' => true,
@@ -518,8 +510,10 @@ class AuthController extends Controller
         // Get recent attempts
         $recentAttempts = $this->getRecentAttempts($user);
 
+        $effectiveWallet = $user->getEffectiveWallet();
+        
         return [
-            'token_balance' => $user->wallet->balance ?? 0,
+            'token_balance' => $effectiveWallet->balance ?? 0,
             'assessment_stats' => $assessmentStats,
             'recent_assessments' => $recentAssessments,
             'recent_attempts' => $recentAttempts,
@@ -639,5 +633,31 @@ class AuthController extends Controller
         }
 
         return 0;
+    }
+
+    /**
+     * Check if a phone number is a valid M-Pesa number
+     */
+    private function isValidMpesaNumber(string $phoneNumber): bool
+    {
+        // Valid M-Pesa prefixes
+        $validPrefixes = [
+            '254700', '254701', '254702', '254703', '254704', '254705', '254706', '254707', '254708', '254709',
+            '254710', '254711', '254712', '254713', '254714', '254715', '254716', '254717', '254718', '254719',
+            '254720', '254721', '254722', '254723', '254724', '254725', '254726', '254727', '254728', '254729',
+            '254740', '254741', '254742', '254743', '254745', '254746', '254748', '254757', '254758', '254759',
+            '254768', '254769', '254790', '254791', '254792', '254793', '254794', '254795', '254796', '254797',
+            '254798', '254799', '254110', '254111', '254112', '254113', '254114', '254115'
+        ];
+
+        // Check if phone number starts with any valid prefix
+        foreach ($validPrefixes as $prefix) {
+            if (str_starts_with($phoneNumber, $prefix)) {
+                // Check if the total length is 12 (254 + 9 digits)
+                return strlen($phoneNumber) === 12;
+            }
+        }
+
+        return false;
     }
 }

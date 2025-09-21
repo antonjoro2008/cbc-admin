@@ -30,8 +30,6 @@ class UserForm
                     ->schema([
                         TextInput::make('phone')
                             ->label('Phone'),
-                        TextInput::make('mpesa_phone')
-                            ->label('MPESA Phone'),
                         Select::make('role')
                             ->label('Role')
                             ->options([

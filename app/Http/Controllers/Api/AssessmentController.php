@@ -335,7 +335,7 @@ class AssessmentController extends Controller
                     'score' => $inProgressAttempt->score,
                     'status' => 'in_progress',
                     'tokens_deducted' => 0, // No new tokens deducted
-                    'remaining_balance' => $user->wallet->balance ?? 0
+                    'remaining_balance' => $user->getEffectiveWallet()->balance ?? 0
                 ]
             ]);
         }
@@ -346,8 +346,8 @@ class AssessmentController extends Controller
             // Get minutes per token setting
             $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
             
-            // Get user's wallet
-            $wallet = $user->wallet;
+            // Get user's effective wallet (institution admin's wallet for institution students)
+            $wallet = $user->getEffectiveWallet();
             if (!$wallet) {
                 return response()->json([
                     'success' => false,
@@ -797,8 +797,8 @@ class AssessmentController extends Controller
                 ], 404);
             }
 
-            // Get user's wallet
-            $wallet = $user->wallet;
+            // Get user's effective wallet (institution admin's wallet for institution students)
+            $wallet = $user->getEffectiveWallet();
             if (!$wallet) {
                 return response()->json([
                     'success' => false,

@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\ParentLearnerController;
+use App\Http\Controllers\Api\InstitutionStudentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -75,9 +77,26 @@ Route::middleware('auth:sanctum')->group(function () {
     // Transactions
     Route::get('/my-transactions', [TransactionController::class, 'myTransactions']);
     
+    // Parent learners routes (only for parent users)
+    Route::middleware('parent')->group(function () {
+        Route::get('/parent/learners', [ParentLearnerController::class, 'index']);
+        Route::post('/parent/learners', [ParentLearnerController::class, 'store']);
+        Route::post('/parent/learners/multiple', [ParentLearnerController::class, 'storeMultiple']);
+        Route::get('/parent/learners/{parentLearner}', [ParentLearnerController::class, 'show']);
+        Route::put('/parent/learners/{parentLearner}', [ParentLearnerController::class, 'update']);
+        Route::delete('/parent/learners/{parentLearner}', [ParentLearnerController::class, 'destroy']);
+    });
+    
     // Institution-specific routes (only for institution users)
     Route::middleware('institution')->group(function () {
-        Route::get('/institution/students', [UserController::class, 'institutionStudents']);
+        Route::get('/institution/students', [InstitutionStudentController::class, 'index']);
+        Route::post('/institution/students', [InstitutionStudentController::class, 'store']);
+        Route::post('/institution/students/multiple', [InstitutionStudentController::class, 'storeMultiple']);
+        Route::post('/institution/students/import', [InstitutionStudentController::class, 'importFromExcel']);
+        Route::get('/institution/students/{student}', [InstitutionStudentController::class, 'show']);
+        Route::put('/institution/students/{student}', [InstitutionStudentController::class, 'update']);
+        Route::delete('/institution/students/{student}', [InstitutionStudentController::class, 'destroy']);
+        
         Route::get('/institution/assessments', [AssessmentController::class, 'institutionAssessments']);
         Route::get('/institution/transactions', [TransactionController::class, 'institutionTransactions']);
     });

@@ -24,9 +24,6 @@ class UsersTable
                     ->sortable(),
                 TextColumn::make('phone')
                     ->searchable(),
-                TextColumn::make('mpesa_phone')
-                    ->label('MPESA Phone')
-                    ->searchable(),
                 TextColumn::make('role')
                     ->searchable()
                     ->sortable(),

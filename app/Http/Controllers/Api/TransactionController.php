@@ -109,7 +109,7 @@ class TransactionController extends Controller
             'this_month_spent' => number_format($thisMonthSpent, 2),
             'total_tokens_credited' => $totalTokensCredited,
             'total_tokens_used' => $totalTokensUsed,
-            'current_balance' => $user->wallet->balance ?? 0
+            'current_balance' => $user->getEffectiveWallet()->balance ?? 0
         ];
     }
 

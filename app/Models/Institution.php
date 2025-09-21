@@ -20,7 +20,6 @@ class Institution extends Model
         'logo_path',
         'email',
         'phone',
-        'mpesa_phone',
         'address',
         'motto',
         'theme_color',

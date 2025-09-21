@@ -28,8 +28,6 @@ class UserInfolist
                             ->schema([
                                 TextEntry::make('phone')
                                     ->label('Phone'),
-                                TextEntry::make('mpesa_phone')
-                                    ->label('MPESA Phone'),
                                 TextEntry::make('role')
                                     ->label('Role'),
                             ]),

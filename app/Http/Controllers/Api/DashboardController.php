@@ -19,10 +19,12 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         
+        $effectiveWallet = $user->getEffectiveWallet();
+        
         $data = [
             'user' => $user->load('institution', 'wallet'),
-            'token_balance' => $user->wallet->balance ?? 0,
-            'minutes_balance' => $user->wallet->available_minutes ?? 0,
+            'token_balance' => $effectiveWallet->balance ?? 0,
+            'minutes_balance' => $effectiveWallet->available_minutes ?? 0,
             'assessment_stats' => $this->getAssessmentStats($user),
             'recent_assessments' => $this->getRecentAssessments($user),
             'recent_attempts' => $this->getRecentAttempts($user),
@@ -41,12 +43,14 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         
+        $effectiveWallet = $user->getEffectiveWallet();
+        
         return response()->json([
             'success' => true,
             'data' => [
-                'token_balance' => $user->wallet->balance ?? 0,
-                'minutes_balance' => $user->wallet->available_minutes ?? 0,
-                'wallet_id' => $user->wallet->id ?? null,
+                'token_balance' => $effectiveWallet->balance ?? 0,
+                'minutes_balance' => $effectiveWallet->available_minutes ?? 0,
+                'wallet_id' => $effectiveWallet->id ?? null,
             ]
         ]);
     }
@@ -84,7 +88,8 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         
-        $tokenHistory = TokenTransaction::where('wallet_id', $user->wallet->id ?? 0)
+        $effectiveWallet = $user->getEffectiveWallet();
+        $tokenHistory = TokenTransaction::where('wallet_id', $effectiveWallet->id ?? 0)
             ->with(['wallet.user'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);

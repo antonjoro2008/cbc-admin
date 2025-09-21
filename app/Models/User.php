@@ -25,9 +25,9 @@ class User extends Authenticatable
         'institution_id',
         'name',
         'phone_number',
+        'admission_number',
         'email',
         'password',
-        'mpesa_phone',
         'user_type',
         'grade_level',
     ];
@@ -69,6 +69,26 @@ class User extends Authenticatable
     public function wallet(): HasOne
     {
         return $this->hasOne(Wallet::class);
+    }
+
+    /**
+     * Get the effective wallet for the user.
+     * For institution students, returns the institution admin's wallet.
+     * For other users, returns their own wallet.
+     */
+    public function getEffectiveWallet()
+    {
+        if ($this->isStudent() && $this->institution_id) {
+            // For institution students, get the institution admin's wallet
+            $institutionAdmin = User::where('institution_id', $this->institution_id)
+                ->where('user_type', 'institution')
+                ->first();
+            
+            return $institutionAdmin ? $institutionAdmin->wallet : null;
+        }
+        
+        // For individual users (parents, individual students), return their own wallet
+        return $this->wallet;
     }
 
     /**
@@ -125,5 +145,21 @@ class User extends Authenticatable
     public function isStudent(): bool
     {
         return $this->user_type === 'student';
+    }
+
+    /**
+     * Check if the user is a parent.
+     */
+    public function isParent(): bool
+    {
+        return $this->user_type === 'parent';
+    }
+
+    /**
+     * Get the learners for the parent.
+     */
+    public function parentLearners(): HasMany
+    {
+        return $this->hasMany(ParentLearner::class, 'parent_id');
     }
 }

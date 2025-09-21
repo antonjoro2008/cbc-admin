@@ -19,7 +19,7 @@ Authorization: Bearer {your_token}
 
 ### Authentication
 
-#### 1. Student Registration
+#### 1. User Registration (Student or Parent)
 ```http
 POST /api/register
 ```
@@ -28,16 +28,21 @@ POST /api/register
 ```json
 {
     "name": "John Doe",
+    "admission_number": "STU001",
     "email": "john@example.com",
     "password": "password123",
     "password_confirmation": "password123",
-    "mpesa_phone": "254700000000",
     "institution_id": 1,
-    "grade_level": "Grade 8"
+    "grade_level": "Grade 8",
+    "user_type": "student"
 }
 ```
 
-**Note:** `institution_id` and `grade_level` are optional fields. Students can register without being associated with an institution. `mpesa_phone` is required and must be in the format 254XXXXXXXXX (Kenyan phone number).
+**Note:** 
+- `user_type` is required and must be either "student" or "parent"
+- `institution_id` and `grade_level` are optional fields. Students can register without being associated with an institution
+- `phone_number` is required and must be a valid M-Pesa number with supported prefix
+- For parent registration, `institution_id` and `grade_level` are typically not needed
 
 **Response:**
 ```json
@@ -48,9 +53,9 @@ POST /api/register
         "user": {
             "id": 1,
             "name": "John Doe",
+            "admission_number": "STU001",
             "email": "john@example.com",
             "user_type": "student",
-            "mpesa_phone": "254700000000",
             "institution": {...}
         },
         "access_token": "1|abc123...",
@@ -72,6 +77,10 @@ POST /api/register
 }
 ```
 
+**Note:** The success message will be dynamic based on the `user_type`:
+- For `user_type: "student"` → "Student registered successfully"
+- For `user_type: "parent"` → "Parent registered successfully"
+
 #### 2. Institution Registration
 ```http
 POST /api/institution/register
@@ -84,7 +93,6 @@ POST /api/institution/register
     "institution_email": "admin@abcschool.com",
     "institution_phone": "+254700000000",
     "institution_address": "123 Main St, Nairobi",
-    "mpesa_phone": "254700000000",
     "admin_name": "Admin User",
     "admin_email": "admin@abcschool.com",
     "admin_password": "password123",
@@ -92,7 +100,6 @@ POST /api/institution/register
 }
 ```
 
-**Note:** `mpesa_phone` is required and must be in the format 254XXXXXXXXX (Kenyan phone number). This will be saved to the institutions table.
 
 #### 3. Login
 ```http
@@ -102,10 +109,14 @@ POST /api/login
 **Request Body:**
 ```json
 {
-    "email": "user@example.com",
+    "login_identifier": "254700000000",
     "password": "password123"
 }
 ```
+
+**Note:** The `login_identifier` can be either:
+- Phone number (for individual users and parents)
+- Admission number (for institution students)
 
 **Response:**
 ```json
@@ -118,7 +129,6 @@ POST /api/login
             "name": "John Doe",
             "email": "john@example.com",
             "user_type": "student",
-            "mpesa_phone": "254700000000",
             "institution": {...},
             "wallet": {...}
         },
@@ -141,9 +151,6 @@ POST /api/login
 }
 ```
 
-**Note:** The `mpesa_phone` field is included in the user object:
-- For **individual users (students)**: `mpesa_phone` comes from the users table
-- For **institution users**: `mpesa_phone` comes from the institutions table
 
 #### 4. Logout
 ```http
@@ -546,21 +553,449 @@ GET /api/payments/{id}
 
 ### Institution-Specific Endpoints
 
-#### 20. Get Institution Students (Institution users only)
+### Institution Student Management
+
+#### 20. Get Institution Students
 ```http
 GET /api/institution/students
 ```
 *Requires institution authentication*
 
+Returns all students for the authenticated institution with pagination and filtering options.
+
+**Query Parameters:**
+- `search`: Search in name, email, admission_number, or grade_level
+- `grade_level`: Filter by grade level
+- `per_page`: Items per page (default: 20)
+- `page`: Page number (default: 1)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "current_page": 1,
+        "data": [
+            {
+                "id": 1,
+                "name": "John Doe",
+                "admission_number": "STU001",
+                "email": "john@example.com",
+                "user_type": "student",
+                "institution_id": 1,
+                "grade_level": "Grade 6",
+                "created_at": "2024-01-15T10:30:00.000000Z",
+                "updated_at": "2024-01-15T10:30:00.000000Z"
+            }
+        ],
+        "total": 25,
+        "per_page": 20,
+        "last_page": 2
+    }
+}
+```
+
+#### 21. Create Single Student
+```http
+POST /api/institution/students
+```
+*Requires institution authentication*
+
+**Request Body:**
+```json
+{
+    "name": "John Doe",
+    "admission_number": "STU001",
+    "email": "john@example.com",
+    "password": "password123",
+    "password_confirmation": "password123",
+    "grade_level": "Grade 6"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Student created successfully",
+    "data": {
+        "id": 1,
+        "name": "John Doe",
+        "admission_number": "STU001",
+        "email": "john@example.com",
+        "user_type": "student",
+        "institution_id": 1,
+        "grade_level": "Grade 6",
+        "created_at": "2024-01-15T10:30:00.000000Z",
+        "updated_at": "2024-01-15T10:30:00.000000Z"
+    }
+}
+```
+
+#### 22. Create Multiple Students
+```http
+POST /api/institution/students/multiple
+```
+*Requires institution authentication*
+
+**Request Body:**
+```json
+{
+    "students": [
+        {
+            "name": "John Doe",
+            "admission_number": "STU001",
+            "email": "john@example.com",
+            "password": "password123",
+            "grade_level": "Grade 6"
+        },
+        {
+            "name": "Jane Smith",
+            "admission_number": "STU002",
+            "email": "jane@example.com",
+            "password": "password123",
+            "grade_level": "Grade 7"
+        }
+    ]
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "2 students created successfully",
+    "data": [
+        {
+            "id": 1,
+            "name": "John Doe",
+            "admission_number": "STU001",
+            "email": "john@example.com",
+            "user_type": "student",
+            "institution_id": 1,
+            "grade_level": "Grade 6",
+            "created_at": "2024-01-15T10:30:00.000000Z",
+            "updated_at": "2024-01-15T10:30:00.000000Z"
+        },
+        {
+            "id": 2,
+            "name": "Jane Smith",
+            "admission_number": "STU002",
+            "email": "jane@example.com",
+            "user_type": "student",
+            "institution_id": 1,
+            "grade_level": "Grade 7",
+            "created_at": "2024-01-15T10:30:00.000000Z",
+            "updated_at": "2024-01-15T10:30:00.000000Z"
+        }
+    ]
+}
+```
+
+#### 23. Import Students from Excel
+```http
+POST /api/institution/students/import
+```
+*Requires institution authentication*
+
+**Note:** This endpoint requires Laravel Excel package to be installed. Install with: `composer require maatwebsite/excel`
+
+**Request Body:**
+- `file`: Excel file (xlsx, xls, csv) with student data
+
+**Excel File Format:**
+| name | admission_number | email | grade_level | password |
+|------|------------------|-------|-------------|----------|
+| John Doe | STU001 | john@example.com | Grade 6 | password123 |
+| Jane Smith | STU002 | jane@example.com | Grade 7 | password123 |
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Students imported successfully",
+    "data": {
+        "imported_count": 2,
+        "errors": [],
+        "warnings": []
+    }
+}
+```
+
+#### 24. Get Specific Student
+```http
+GET /api/institution/students/{id}
+```
+*Requires institution authentication*
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "name": "John Doe",
+        "admission_number": "STU001",
+        "email": "john@example.com",
+        "user_type": "student",
+        "institution_id": 1,
+        "grade_level": "Grade 6",
+        "created_at": "2024-01-15T10:30:00.000000Z",
+        "updated_at": "2024-01-15T10:30:00.000000Z"
+    }
+}
+```
+
+#### 25. Update Student
+```http
+PUT /api/institution/students/{id}
+```
+*Requires institution authentication*
+
+**Request Body:**
+```json
+{
+    "name": "John Doe Updated",
+    "admission_number": "STU001",
+    "email": "john.updated@example.com",
+    "grade_level": "Grade 7"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Student updated successfully",
+    "data": {
+        "id": 1,
+        "name": "John Doe Updated",
+        "admission_number": "STU001",
+        "email": "john.updated@example.com",
+        "user_type": "student",
+        "institution_id": 1,
+        "grade_level": "Grade 7",
+        "created_at": "2024-01-15T10:30:00.000000Z",
+        "updated_at": "2024-01-15T12:00:00.000000Z"
+    }
+}
+```
+
+#### 26. Delete Student
+```http
+DELETE /api/institution/students/{id}
+```
+*Requires institution authentication*
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Student deleted successfully"
+}
+```
+
+**Note:** Institution students do not have individual wallets. They share the institution admin's wallet for token management.
+
+### Parent Learners Management
+
+#### 27. Get Parent Learners
+```http
+GET /api/parent/learners
+```
+*Requires parent authentication*
+
+Returns all learners for the authenticated parent.
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": 1,
+            "parent_id": 123,
+            "name": "John Doe Jr.",
+            "grade_level": "Grade 6",
+            "created_at": "2024-01-15T10:30:00.000000Z",
+            "updated_at": "2024-01-15T10:30:00.000000Z"
+        },
+        {
+            "id": 2,
+            "parent_id": 123,
+            "name": "Jane Doe",
+            "grade_level": "Grade 4",
+            "created_at": "2024-01-15T11:00:00.000000Z",
+            "updated_at": "2024-01-15T11:00:00.000000Z"
+        }
+    ]
+}
+```
+
+#### 28. Add Single Learner
+```http
+POST /api/parent/learners
+```
+*Requires parent authentication*
+
+**Request Body:**
+```json
+{
+    "name": "John Doe Jr.",
+    "grade_level": "Grade 6"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Learner added successfully",
+    "data": {
+        "id": 1,
+        "parent_id": 123,
+        "name": "John Doe Jr.",
+        "grade_level": "Grade 6",
+        "created_at": "2024-01-15T10:30:00.000000Z",
+        "updated_at": "2024-01-15T10:30:00.000000Z"
+    }
+}
+```
+
+#### 29. Add Multiple Learners
+```http
+POST /api/parent/learners/multiple
+```
+*Requires parent authentication*
+
+**Request Body:**
+```json
+{
+    "learners": [
+        {
+            "name": "John Doe Jr.",
+            "grade_level": "Grade 6"
+        },
+        {
+            "name": "Jane Doe",
+            "grade_level": "Grade 4"
+        },
+        {
+            "name": "Bob Doe",
+            "grade_level": "Grade 8"
+        }
+    ]
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "3 learners added successfully",
+    "data": [
+        {
+            "id": 1,
+            "parent_id": 123,
+            "name": "John Doe Jr.",
+            "grade_level": "Grade 6",
+            "created_at": "2024-01-15T10:30:00.000000Z",
+            "updated_at": "2024-01-15T10:30:00.000000Z"
+        },
+        {
+            "id": 2,
+            "parent_id": 123,
+            "name": "Jane Doe",
+            "grade_level": "Grade 4",
+            "created_at": "2024-01-15T10:30:00.000000Z",
+            "updated_at": "2024-01-15T10:30:00.000000Z"
+        },
+        {
+            "id": 3,
+            "parent_id": 123,
+            "name": "Bob Doe",
+            "grade_level": "Grade 8",
+            "created_at": "2024-01-15T10:30:00.000000Z",
+            "updated_at": "2024-01-15T10:30:00.000000Z"
+        }
+    ]
+}
+```
+
+#### 30. Get Specific Learner
+```http
+GET /api/parent/learners/{id}
+```
+*Requires parent authentication*
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "parent_id": 123,
+        "name": "John Doe Jr.",
+        "grade_level": "Grade 6",
+        "created_at": "2024-01-15T10:30:00.000000Z",
+        "updated_at": "2024-01-15T10:30:00.000000Z"
+    }
+}
+```
+
+#### 31. Update Learner
+```http
+PUT /api/parent/learners/{id}
+```
+*Requires parent authentication*
+
+**Request Body:**
+```json
+{
+    "name": "John Doe Jr. Updated",
+    "grade_level": "Grade 7"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Learner updated successfully",
+    "data": {
+        "id": 1,
+        "parent_id": 123,
+        "name": "John Doe Jr. Updated",
+        "grade_level": "Grade 7",
+        "created_at": "2024-01-15T10:30:00.000000Z",
+        "updated_at": "2024-01-15T12:00:00.000000Z"
+    }
+}
+```
+
+#### 32. Delete Learner
+```http
+DELETE /api/parent/learners/{id}
+```
+*Requires parent authentication*
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Learner deleted successfully"
+}
+```
+
 ### Admin Endpoints
 
-#### 21. Get All Users (Admin only)
+#### 33. Get All Users (Admin only)
 ```http
 GET /api/admin/users
 ```
 *Requires admin authentication*
 
-#### 22. Get All Institutions (Admin only)
+#### 34. Get All Institutions (Admin only)
 ```http
 GET /api/admin/institutions
 ```
@@ -613,6 +1048,14 @@ GET /api/admin/institutions
 - Can view their assessment attempts and scores
 - Can make payments to purchase tokens
 - Can view their token balance and history
+
+### Parent Users
+- Can register and login
+- Can view their profile and update it
+- Can add, view, update, and delete their learners
+- Can add multiple learners at once
+- Can view their token balance and history
+- Can make payments to purchase tokens
 
 ### Institution Users
 - Can register their institution

@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'institution' => \App\Http\Middleware\InstitutionMiddleware::class,
+            'parent' => \App\Http\Middleware\ParentMiddleware::class,
         ])->validateCsrfTokens(except: [
                     'api/login',
                     'api/register',
