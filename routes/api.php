@@ -61,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/subjects/{subjectId}/assessments', [AssessmentController::class, 'getBySubject']);
     Route::post('/assessments/{assessment}/start', [AssessmentController::class, 'startAssessment']);
     Route::post('/assessments/submit', [AssessmentController::class, 'submitAssessment']);
+    Route::post('/assessments/track-progress', [AssessmentController::class, 'trackProgress']);
     Route::get('/my-assessments', [AssessmentController::class, 'myAssessments']);
     
     // Payments

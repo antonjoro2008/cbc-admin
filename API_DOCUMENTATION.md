@@ -501,7 +501,44 @@ POST /api/payments
 }
 ```
 
-#### 19. Get Payment Details
+#### 19. Track Assessment Progress (Minute-by-Minute)
+```http
+POST /api/assessments/track-progress
+```
+*Requires authentication*
+
+This endpoint is called every minute by the client during an active assessment to track progress and deduct tokens/minutes accordingly.
+
+**Request Body:**
+```json
+{
+    "attempt_id": 123,
+    "minutes_elapsed": 1
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Progress tracked successfully",
+    "data": {
+        "attempt_id": 123,
+        "minutes_elapsed": 1,
+        "tokens_deducted": 0.5,
+        "minutes_deducted": 1.0,
+        "remaining_token_balance": 99.5,
+        "remaining_minutes_balance": 99.0
+    }
+}
+```
+
+**Error Responses:**
+- `400`: Insufficient balance
+- `404`: Assessment attempt not found or not in progress
+- `422`: Validation failed
+
+#### 20. Get Payment Details
 ```http
 GET /api/payments/{id}
 ```
@@ -589,15 +626,35 @@ GET /api/admin/institutions
 - Can view all users and institutions
 - Can manage system-wide settings
 
-## Token Management
+## Token and Minutes Management
 
-### Token Lifecycle
+### New Minutes-Based System
+The system has been updated to use a minutes-based tracking system instead of the previous tokens-per-assessment model:
+
+1. **Deposits**: When users make payments, both tokens and minutes are credited to their wallet
+2. **Assessment Start**: Users pay 1 token and 1 minute to start an assessment
+3. **Minute-by-Minute Tracking**: During assessment, tokens and minutes are deducted every minute based on the `minutes_per_token` setting
+4. **Balance Tracking**: Users can track both their token balance and available minutes
+
+### Token and Minutes Lifecycle
+1. **Payment**: User makes payment → tokens and minutes credited to wallet
+2. **Assessment Start**: 1 token + 1 minute deducted to begin assessment
+3. **Progress Tracking**: Every minute, fractional tokens and 1 minute deducted
+4. **Assessment End**: No additional charges when assessment is completed
+
+### Settings
+- `minutes_per_token`: Defines how many minutes each token provides (default: 1.0)
+- This setting determines the fractional token deduction per minute
+
+### API Token Management
+
+### API Token Lifecycle
 1. **Registration/Login**: User receives an access token
 2. **API Requests**: Include token in Authorization header
 3. **Token Refresh**: Use refresh endpoint to get new token
 4. **Logout**: Token is invalidated
 
-### Token Security
+### API Token Security
 - Tokens are automatically invalidated on logout
 - Tokens can be refreshed to extend session
 - Each user can have only one active token at a time

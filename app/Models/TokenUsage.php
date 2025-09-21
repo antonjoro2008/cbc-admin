@@ -26,7 +26,7 @@ class TokenUsage extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'tokens_used' => 'integer',
+        'tokens_used' => 'decimal:2',
     ];
 
     /**

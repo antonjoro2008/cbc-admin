@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Wallet;
 use App\Models\Payment;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use App\Models\TokenTransaction;
 use Illuminate\Support\Facades\DB;
@@ -259,21 +260,26 @@ class PaymentController extends Controller
     }
 
     /**
-     * Process successful payment by adding tokens to wallet
+     * Process successful payment by adding tokens and minutes to wallet
      */
     private function processSuccessfulPayment($payment)
     {
         $wallet = Wallet::where('user_id', $payment->user_id)->first();
 
         if ($wallet) {
-            $wallet->addTokens($payment->tokens);
+            // Get minutes per token setting to calculate minutes to credit
+            $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
+            $minutesToCredit = $payment->tokens * $minutesPerToken;
+
+            // Add both tokens and minutes to wallet
+            $wallet->addTokensAndMinutes($payment->tokens, $minutesToCredit);
 
             // Create token transaction record
             TokenTransaction::create([
                 'wallet_id' => $wallet->id,
                 'type' => 'credit',
                 'amount' => $payment->tokens,
-                'description' => "Payment via {$payment->channel}",
+                'description' => "Payment via {$payment->channel} - {$payment->tokens} tokens, {$minutesToCredit} minutes",
                 'reference' => $payment->reference ?? $payment->id,
             ]);
         }

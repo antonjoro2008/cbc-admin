@@ -22,6 +22,7 @@ class DashboardController extends Controller
         $data = [
             'user' => $user->load('institution', 'wallet'),
             'token_balance' => $user->wallet->balance ?? 0,
+            'minutes_balance' => $user->wallet->available_minutes ?? 0,
             'assessment_stats' => $this->getAssessmentStats($user),
             'recent_assessments' => $this->getRecentAssessments($user),
             'recent_attempts' => $this->getRecentAttempts($user),
@@ -44,6 +45,7 @@ class DashboardController extends Controller
             'success' => true,
             'data' => [
                 'token_balance' => $user->wallet->balance ?? 0,
+                'minutes_balance' => $user->wallet->available_minutes ?? 0,
                 'wallet_id' => $user->wallet->id ?? null,
             ]
         ]);

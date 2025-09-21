@@ -62,12 +62,13 @@ class AssessmentController extends Controller
 
         $assessments = $query->paginate($request->get('per_page', 20));
 
-        // Get token cost per assessment from settings
-        $tokenCostPerAssessment = Setting::getValue('tokens_per_assessment', 1);
+        // Get minutes per token setting
+        $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
 
-        // Add token cost to each assessment
-        $assessments->getCollection()->transform(function ($assessment) use ($tokenCostPerAssessment) {
-            $assessment->token_cost = $tokenCostPerAssessment;
+        // Add token cost to each assessment (1 token per assessment for now, but minutes will be deducted per minute)
+        $assessments->getCollection()->transform(function ($assessment) use ($minutesPerToken) {
+            $assessment->token_cost = 1; // Initial token cost to start assessment
+            $assessment->minutes_per_token = $minutesPerToken;
             return $assessment;
         });
 
@@ -205,12 +206,13 @@ class AssessmentController extends Controller
 
         $assessments = $query->paginate($request->get('per_page', 20));
 
-        // Get token cost per assessment from settings
-        $tokenCostPerAssessment = Setting::getValue('tokens_per_assessment', 1);
+        // Get minutes per token setting
+        $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
 
-        // Add token cost to each assessment
-        $assessments->getCollection()->transform(function ($assessment) use ($tokenCostPerAssessment) {
-            $assessment->token_cost = $tokenCostPerAssessment;
+        // Add token cost to each assessment (1 token per assessment for now, but minutes will be deducted per minute)
+        $assessments->getCollection()->transform(function ($assessment) use ($minutesPerToken) {
+            $assessment->token_cost = 1; // Initial token cost to start assessment
+            $assessment->minutes_per_token = $minutesPerToken;
             return $assessment;
         });
 
@@ -341,8 +343,8 @@ class AssessmentController extends Controller
         try {
             DB::beginTransaction();
 
-            // Get tokens per assessment setting
-            $tokensPerAssessment = Setting::getValue('tokens_per_assessment', 1);
+            // Get minutes per token setting
+            $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
             
             // Get user's wallet
             $wallet = $user->wallet;
@@ -353,24 +355,30 @@ class AssessmentController extends Controller
                 ], 500);
             }
 
-            // Check if user has sufficient tokens
-            if (!$wallet->hasSufficientBalance($tokensPerAssessment)) {
+            // For starting assessment, we deduct 1 token and 1 minute (initial cost)
+            $initialTokenCost = 1.0;
+            $initialMinuteCost = 1.0;
+
+            // Check if user has sufficient balance
+            if (!$wallet->hasSufficientBalance($initialTokenCost) || !$wallet->hasSufficientMinutes($initialMinuteCost)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Insufficient tokens. You need ' . $tokensPerAssessment . ' tokens to start this assessment.',
+                    'message' => 'Insufficient balance. You need ' . $initialTokenCost . ' tokens and ' . $initialMinuteCost . ' minutes to start this assessment.',
                     'data' => [
-                        'required_tokens' => $tokensPerAssessment,
-                        'current_balance' => $wallet->balance
+                        'required_tokens' => $initialTokenCost,
+                        'required_minutes' => $initialMinuteCost,
+                        'current_token_balance' => $wallet->balance,
+                        'current_minutes_balance' => $wallet->available_minutes
                     ]
                 ], 400);
             }
 
-            // Deduct tokens from wallet
-            $deducted = $wallet->deductTokens($tokensPerAssessment);
+            // Deduct initial tokens and minutes from wallet
+            $deducted = $wallet->deductTokensAndMinutes($initialTokenCost, $initialMinuteCost);
             if (!$deducted) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to deduct tokens. Please try again.'
+                    'message' => 'Failed to deduct balance. Please try again.'
                 ], 500);
             }
 
@@ -387,10 +395,10 @@ class AssessmentController extends Controller
                 'score' => null
             ]);
 
-            // Record token usage
+            // Record initial token usage
             TokenUsage::create([
                 'attempt_id' => $attempt->id,
-                'tokens_used' => $tokensPerAssessment
+                'tokens_used' => $initialTokenCost
             ]);
 
             DB::commit();
@@ -405,8 +413,10 @@ class AssessmentController extends Controller
                     'completed_at' => $attempt->completed_at,
                     'score' => $attempt->score,
                     'status' => 'in_progress',
-                    'tokens_deducted' => $tokensPerAssessment,
-                    'remaining_balance' => $wallet->fresh()->balance
+                    'tokens_deducted' => $initialTokenCost,
+                    'minutes_deducted' => $initialMinuteCost,
+                    'remaining_token_balance' => $wallet->fresh()->balance,
+                    'remaining_minutes_balance' => $wallet->fresh()->available_minutes
                 ]
             ]);
 
@@ -749,5 +759,114 @@ class AssessmentController extends Controller
         });
         
         return chr(65 + $index); // A, B, C, D, etc.
+    }
+
+    /**
+     * Track assessment progress minute by minute
+     */
+    public function trackProgress(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'attempt_id' => 'required|exists:assessment_attempts,id',
+            'minutes_elapsed' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = $request->user();
+            $attemptId = $request->attempt_id;
+            $minutesElapsed = $request->minutes_elapsed;
+
+            // Find the assessment attempt
+            $attempt = AssessmentAttempt::where('id', $attemptId)
+                ->where('student_id', $user->id)
+                ->whereNull('completed_at') // Only allow tracking for in-progress attempts
+                ->first();
+
+            if (!$attempt) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Assessment attempt not found or not in progress'
+                ], 404);
+            }
+
+            // Get user's wallet
+            $wallet = $user->wallet;
+            if (!$wallet) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Wallet not found. Please contact support.'
+                ], 500);
+            }
+
+            // Get minutes per token setting
+            $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
+            
+            // Calculate tokens to deduct (fraction based on minutes elapsed)
+            $tokensToDeduct = $minutesElapsed / $minutesPerToken;
+            $minutesToDeduct = $minutesElapsed;
+
+            // Check if user has sufficient balance
+            if (!$wallet->hasSufficientBalance($tokensToDeduct) || !$wallet->hasSufficientMinutes($minutesToDeduct)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient balance. Please top up your account.',
+                    'data' => [
+                        'required_tokens' => $tokensToDeduct,
+                        'required_minutes' => $minutesToDeduct,
+                        'current_token_balance' => $wallet->balance,
+                        'current_minutes_balance' => $wallet->available_minutes
+                    ]
+                ], 400);
+            }
+
+            DB::beginTransaction();
+
+            // Deduct tokens and minutes from wallet
+            $deducted = $wallet->deductTokensAndMinutes($tokensToDeduct, $minutesToDeduct);
+            if (!$deducted) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to deduct balance. Please try again.'
+                ], 500);
+            }
+
+            // Record token usage for this minute
+            TokenUsage::create([
+                'attempt_id' => $attempt->id,
+                'tokens_used' => $tokensToDeduct
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Progress tracked successfully',
+                'data' => [
+                    'attempt_id' => $attempt->id,
+                    'minutes_elapsed' => $minutesElapsed,
+                    'tokens_deducted' => $tokensToDeduct,
+                    'minutes_deducted' => $minutesToDeduct,
+                    'remaining_token_balance' => $wallet->fresh()->balance,
+                    'remaining_minutes_balance' => $wallet->fresh()->available_minutes
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to track progress',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
