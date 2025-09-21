@@ -104,7 +104,7 @@ class PaymentController extends Controller
                 $msisdn = $request->phone_number;
 
                 $stkPayload = [
-                    "orderId" => $reference,
+                    "orderId" => $reference."-".$msisdn,
                     "msisdn" => $msisdn,
                     "amount" => $request->amount,
                     "profileId" => 0,
@@ -205,8 +205,10 @@ class PaymentController extends Controller
             // If payment is successful, add tokens to wallet
             if ($request->status === 'successful' && $oldStatus !== 'successful') {
 
+                Log::info("Payment is successful");
                 $this->createMpesaPayment($payment, $request);
                 $this->processSuccessfulPayment($payment);
+                Log::info("Payment processed successfully");
             }
 
             DB::commit();
@@ -220,6 +222,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
+            Log::error("ERROR:: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Payment status update failed',
@@ -235,6 +238,7 @@ class PaymentController extends Controller
     {
         // This would integrate with M-Pesa API
         // For now, create a placeholder record
+        Log::info("Creating M-Pesa payment details");
         $payment->mpesaPayment()->create([
             'payment_id' => $payment->id,
             'mpesa_receipt_number' => $request->mpesa_receipt_number ?? '',
@@ -242,6 +246,7 @@ class PaymentController extends Controller
             'transaction_date' => $request->transaction_date ?? date('Y-m-d H:i:s'),
             'amount' => $request->amount ?? 0.0,
         ]);
+        Log::info("M-Pesa payment details created");
     }
 
     /**
@@ -265,11 +270,14 @@ class PaymentController extends Controller
     private function processSuccessfulPayment($payment)
     {
         $wallet = Wallet::where('user_id', $payment->user_id)->first();
+        Log::info("Wallet found");
 
         if ($wallet) {
             // Get minutes per token setting to calculate minutes to credit
             $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
             $minutesToCredit = $payment->tokens * $minutesPerToken;
+            Log::info("Minutes to credit: " . $minutesToCredit);
+            Log::info("Tokens to credit: " . $payment->tokens);
 
             // Add both tokens and minutes to wallet
             $wallet->addTokensAndMinutes($payment->tokens, $minutesToCredit);
@@ -282,6 +290,9 @@ class PaymentController extends Controller
                 'description' => "Payment via {$payment->channel} - {$payment->tokens} tokens, {$minutesToCredit} minutes",
                 'reference' => $payment->reference ?? $payment->id,
             ]);
+            Log::info("Token transaction record created");
+        } else {
+            Log::error("Wallet not found");
         }
     }
 
