@@ -178,6 +178,8 @@ class PaymentController extends Controller
      */
     public function updateStatus(Request $request)
     {
+        Log::info("Updating payment status");
+        Log::info("Request: " . json_encode($request->all()));
         $payment = Payment::where('reference', $request->reference)->first();
 
         $validator = Validator::make($request->all(), [
