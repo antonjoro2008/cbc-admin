@@ -196,7 +196,9 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $payment = Payment::where('reference', $requestArray['reference'])->first();
+        $paymentReference = explode('-', $requestArray['reference'])[0];
+
+        $payment = Payment::where('reference', $paymentReference)->first();
 
         if (!$payment) {
             Log::error("Payment not found");
@@ -212,7 +214,7 @@ class PaymentController extends Controller
             $oldStatus = $payment->status;
             $payment->update([
                 'status' => $requestArray['status'],
-                'reference' => $requestArray['reference'] ?? $payment->reference,
+                'reference' => $paymentReference ?? $payment->reference,
             ]);
 
             // If payment is successful, add tokens to wallet
