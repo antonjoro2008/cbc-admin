@@ -29,6 +29,7 @@ class Wallet extends Model
      */
     protected $casts = [
         'balance' => 'decimal:2',
+        'available_minutes' => 'decimal:2',
     ];
 
     /**

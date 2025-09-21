@@ -180,12 +180,13 @@ class PaymentController extends Controller
     {
         Log::info("Updating payment status");
         Log::info("Request: " . json_encode($request->all()));
-        $payment = Payment::where('reference', $request->reference)->first();
 
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:pending,successful,failed,cancelled',
             'reference' => 'sometimes|string|max:255',
         ]);
+
+        $requestArray = $request->all();
 
         if ($validator->fails()) {
             return response()->json([
@@ -195,20 +196,30 @@ class PaymentController extends Controller
             ], 422);
         }
 
+        $payment = Payment::where('reference', $requestArray['reference'])->first();
+
+        if (!$payment) {
+            Log::error("Payment not found");
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment not found'
+            ], 404);
+        }
+
         try {
             DB::beginTransaction();
 
             $oldStatus = $payment->status;
             $payment->update([
-                'status' => $request->status,
-                'reference' => $request->reference ?? $payment->reference,
+                'status' => $requestArray['status'],
+                'reference' => $requestArray['reference'] ?? $payment->reference,
             ]);
 
             // If payment is successful, add tokens to wallet
-            if ($request->status === 'successful' && $oldStatus !== 'successful') {
+            if ($requestArray['status'] === 'successful' && $oldStatus !== 'successful') {
 
                 Log::info("Payment is successful");
-                $this->createMpesaPayment($payment, $request);
+                $this->createMpesaPayment($payment, $requestArray);
                 $this->processSuccessfulPayment($payment);
                 Log::info("Payment processed successfully");
             }
@@ -236,17 +247,17 @@ class PaymentController extends Controller
     /**
      * Create M-Pesa payment details
      */
-    private function createMpesaPayment($payment, $request)
+    private function createMpesaPayment($payment, $requestArray)
     {
         // This would integrate with M-Pesa API
         // For now, create a placeholder record
         Log::info("Creating M-Pesa payment details");
         $payment->mpesaPayment()->create([
             'payment_id' => $payment->id,
-            'mpesa_receipt_number' => $request->mpesa_receipt_number ?? '',
-            'phone_number' => $request->phone_number ?? '',
-            'transaction_date' => $request->transaction_date ?? date('Y-m-d H:i:s'),
-            'amount' => $request->amount ?? 0.0,
+            'mpesa_receipt_number' => $requestArray['transaction_id'] ?? '',
+            'phone_number' => $requestArray['phone'] ?? '',
+            'transaction_date' => date('Y-m-d H:i:s', strtotime($requestArray['transaction_date'])) ?? date('Y-m-d H:i:s'),
+            'amount' => $requestArray['amount'] ?? 0.0,
         ]);
         Log::info("M-Pesa payment details created");
     }
