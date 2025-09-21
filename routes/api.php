@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AssessmentController;
+use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\TransactionController;
@@ -24,6 +25,11 @@ use App\Http\Controllers\Api\TransactionController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/institution/register', [AuthController::class, 'registerInstitution']);
+
+// Password reset routes (no authentication required)
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/verify-reset-code', [AuthController::class, 'verifyResetCode']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Payment webhook routes (no authentication required)
 Route::post('/payments/mpesa', [PaymentController::class, 'updateStatus']);
@@ -45,9 +51,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/assessment-stats', [DashboardController::class, 'assessmentStats']);
     Route::get('/recent-assessments', [DashboardController::class, 'recentAssessments']);
     
+    // Subjects
+    Route::get('/subjects', [SubjectController::class, 'index']);
+    Route::get('/subjects/{subject}', [SubjectController::class, 'show']);
+    
     // Assessments
     Route::get('/assessments', [AssessmentController::class, 'index']);
     Route::get('/assessments/{assessment}', [AssessmentController::class, 'show']);
+    Route::get('/subjects/{subjectId}/assessments', [AssessmentController::class, 'getBySubject']);
     Route::post('/assessments/{assessment}/start', [AssessmentController::class, 'startAssessment']);
     Route::post('/assessments/submit', [AssessmentController::class, 'submitAssessment']);
     Route::get('/my-assessments', [AssessmentController::class, 'myAssessments']);

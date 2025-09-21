@@ -158,6 +158,72 @@ class AssessmentController extends Controller
     }
 
     /**
+     * Get assessments by subject ID
+     */
+    public function getBySubject(Request $request, $subjectId)
+    {
+        // Validate subject exists
+        $subject = Subject::find($subjectId);
+        if (!$subject) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Subject not found'
+            ], 404);
+        }
+
+        $query = Assessment::with(['subject', 'creator.institution'])
+            ->where('subject_id', $subjectId)
+            ->whereHas('questions') // Only return assessments that have questions
+            ->where('status', 1); // Only return assessments with status 1
+
+        // Apply search filters
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('paper_code', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('grade_level')) {
+            $query->where('grade_level', $request->grade_level);
+        }
+
+        if ($request->has('year')) {
+            $query->where('year', $request->year);
+        }
+
+        if ($request->has('exam_body')) {
+            $query->where('exam_body', $request->exam_body);
+        }
+
+        // Apply sorting
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        $assessments = $query->paginate($request->get('per_page', 20));
+
+        // Get token cost per assessment from settings
+        $tokenCostPerAssessment = Setting::getValue('tokens_per_assessment', 1);
+
+        // Add token cost to each assessment
+        $assessments->getCollection()->transform(function ($assessment) use ($tokenCostPerAssessment) {
+            $assessment->token_cost = $tokenCostPerAssessment;
+            return $assessment;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'subject' => $subject,
+                'assessments' => $assessments
+            ]
+        ]);
+    }
+
+    /**
      * Get assessments for an institution (institution users only)
      */
     public function institutionAssessments(Request $request)

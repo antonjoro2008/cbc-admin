@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Institution;
 use App\Models\Wallet;
+use App\Models\PasswordResetCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -20,17 +21,32 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'phone_number' => 'required|string|max:15|regex:/^254[0-9]{9}$/|unique:users',
+            'email' => 'nullable|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Password::defaults()],
             'mpesa_phone' => 'required|string|max:15|regex:/^254[0-9]{9}$/',
             'institution_id' => 'nullable|exists:institutions,id',
             'grade_level' => 'nullable|string|max:50',
+        ], [
+            'name.required' => 'Your full name is required.',
+            'name.max' => 'Your name cannot exceed 255 characters.',
+            'phone_number.required' => 'Your phone number is required.',
+            'phone_number.regex' => 'Phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
+            'phone_number.unique' => 'This phone number is already registered. Please use a different number or try logging in.',
+            'email.email' => 'Please provide a valid email address.',
+            'email.unique' => 'This email address is already registered. Please use a different email or try logging in.',
+            'password.required' => 'A password is required.',
+            'password.confirmed' => 'Password confirmation does not match.',
+            'mpesa_phone.required' => 'M-Pesa phone number is required for payments.',
+            'mpesa_phone.regex' => 'M-Pesa phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
+            'institution_id.exists' => 'The selected institution does not exist.',
+            'grade_level.max' => 'Grade level cannot exceed 50 characters.',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => 'Please check your information and try again.',
                 'errors' => $validator->errors()
             ], 422);
         }
@@ -38,6 +54,7 @@ class AuthController extends Controller
         try {
             $user = User::create([
                 'name' => $request->name,
+                'phone_number' => $request->phone_number,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'mpesa_phone' => $request->mpesa_phone,
@@ -79,8 +96,8 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Registration failed',
-                'error' => $e->getMessage()
+                'message' => 'Registration failed. Please try again or contact support if the problem persists.',
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
     }
@@ -92,19 +109,40 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'institution_name' => 'required|string|max:255',
-            'institution_email' => 'required|string|email|max:255|unique:institutions,email',
+            'institution_email' => 'nullable|string|email|max:255|unique:institutions,email',
             'institution_phone' => 'required|string|max:20',
             'institution_address' => 'required|string|max:500',
             'mpesa_phone' => 'required|string|max:15|regex:/^254[0-9]{9}$/',
             'admin_name' => 'required|string|max:255',
-            'admin_email' => 'required|string|email|max:255|unique:users,email',
+            'admin_phone_number' => 'required|string|max:15|regex:/^254[0-9]{9}$/|unique:users,phone_number',
+            'admin_email' => 'nullable|string|email|max:255|unique:users,email',
             'admin_password' => ['required', 'confirmed', Password::defaults()],
+        ], [
+            'institution_name.required' => 'Institution name is required.',
+            'institution_name.max' => 'Institution name cannot exceed 255 characters.',
+            'institution_email.email' => 'Please provide a valid institution email address.',
+            'institution_email.unique' => 'This institution email is already registered.',
+            'institution_phone.required' => 'Institution phone number is required.',
+            'institution_phone.max' => 'Institution phone number cannot exceed 20 characters.',
+            'institution_address.required' => 'Institution address is required.',
+            'institution_address.max' => 'Institution address cannot exceed 500 characters.',
+            'mpesa_phone.required' => 'M-Pesa phone number is required for payments.',
+            'mpesa_phone.regex' => 'M-Pesa phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
+            'admin_name.required' => 'Admin name is required.',
+            'admin_name.max' => 'Admin name cannot exceed 255 characters.',
+            'admin_phone_number.required' => 'Admin phone number is required.',
+            'admin_phone_number.regex' => 'Admin phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
+            'admin_phone_number.unique' => 'This admin phone number is already registered. Please use a different number.',
+            'admin_email.email' => 'Please provide a valid admin email address.',
+            'admin_email.unique' => 'This admin email is already registered. Please use a different email.',
+            'admin_password.required' => 'Admin password is required.',
+            'admin_password.confirmed' => 'Admin password confirmation does not match.',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => 'Please check your institution information and try again.',
                 'errors' => $validator->errors()
             ], 422);
         }
@@ -122,6 +160,7 @@ class AuthController extends Controller
             // Create institution admin user
             $user = User::create([
                 'name' => $request->admin_name,
+                'phone_number' => $request->admin_phone_number,
                 'email' => $request->admin_email,
                 'password' => Hash::make($request->admin_password),
                 'institution_id' => $institution->id,
@@ -161,8 +200,8 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Institution registration failed',
-                'error' => $e->getMessage()
+                'message' => 'Institution registration failed. Please try again or contact support if the problem persists.',
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
     }
@@ -173,24 +212,35 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email',
+            'phone_number' => 'required|string|regex:/^254[0-9]{9}$/',
             'password' => 'required|string',
+        ], [
+            'phone_number.required' => 'Your phone number is required.',
+            'phone_number.regex' => 'Phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
+            'password.required' => 'Your password is required.',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => 'Please check your login information and try again.',
                 'errors' => $validator->errors()
             ], 422);
         }
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('phone_number', $request->phone_number)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid credentials'
+                'message' => 'No account found with this phone number. Please check your phone number or register for a new account.'
+            ], 401);
+        }
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Incorrect password. Please check your password and try again.'
             ], 401);
         }
 
@@ -265,6 +315,193 @@ class AuthController extends Controller
                 'token_type' => 'Bearer',
             ]
         ]);
+    }
+
+    /**
+     * Send password reset code
+     */
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone_number' => 'required|string|regex:/^254[0-9]{9}$/',
+        ], [
+            'phone_number.required' => 'Your phone number is required.',
+            'phone_number.regex' => 'Phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please provide a valid phone number.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = User::where('phone_number', $request->phone_number)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No account found with this phone number. Please check your phone number or register for a new account.'
+            ], 404);
+        }
+
+        try {
+            // Create reset code
+            $resetCode = PasswordResetCode::createForPhone($request->phone_number, $user->email);
+
+            // TODO: Send email with reset code
+            // For now, we'll just return the code in development
+            // In production, this should be sent via email/SMS
+            $emailSent = $this->sendResetCodeEmail($user->email, $resetCode->code);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password reset code sent successfully',
+                'data' => [
+                    'phone_number' => $request->phone_number,
+                    'email_sent' => $emailSent,
+                    // Remove this in production - only for development
+                    'reset_code' => app()->environment('local') ? $resetCode->code : null,
+                    'expires_in_minutes' => 15
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send reset code. Please try again or contact support if the problem persists.',
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    /**
+     * Verify password reset code
+     */
+    public function verifyResetCode(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone_number' => 'required|string|regex:/^254[0-9]{9}$/',
+            'code' => 'required|string|size:6',
+        ], [
+            'phone_number.required' => 'Your phone number is required.',
+            'phone_number.regex' => 'Phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
+            'code.required' => 'Reset code is required.',
+            'code.size' => 'Reset code must be exactly 6 digits.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please provide valid information.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $resetCode = PasswordResetCode::findValidCode($request->phone_number, $request->code);
+
+        if (!$resetCode) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired reset code. Please request a new code or check your phone number.'
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reset code verified successfully',
+            'data' => [
+                'phone_number' => $request->phone_number,
+                'code_verified' => true,
+                'expires_at' => $resetCode->expires_at
+            ]
+        ]);
+    }
+
+    /**
+     * Reset password using verified code
+     */
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone_number' => 'required|string|regex:/^254[0-9]{9}$/',
+            'code' => 'required|string|size:6',
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ], [
+            'phone_number.required' => 'Your phone number is required.',
+            'phone_number.regex' => 'Phone number must be in the format 254XXXXXXXXX (e.g., 254700000000).',
+            'code.required' => 'Reset code is required.',
+            'code.size' => 'Reset code must be exactly 6 digits.',
+            'password.required' => 'New password is required.',
+            'password.confirmed' => 'Password confirmation does not match.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please check your information and try again.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $resetCode = PasswordResetCode::findValidCode($request->phone_number, $request->code);
+
+        if (!$resetCode) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired reset code. Please request a new code or check your phone number.'
+            ], 400);
+        }
+
+        $user = User::where('phone_number', $request->phone_number)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Account not found. Please contact support.'
+            ], 404);
+        }
+
+        try {
+            // Update user password
+            $user->update([
+                'password' => Hash::make($request->password)
+            ]);
+
+            // Mark reset code as used
+            $resetCode->markAsUsed();
+
+            // Revoke all existing tokens for security
+            $user->tokens()->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password reset successfully. Please login with your new password.'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reset password. Please try again or contact support if the problem persists.',
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    /**
+     * Send reset code via email (placeholder for now)
+     */
+    private function sendResetCodeEmail(string $email, string $code): bool
+    {
+        // TODO: Implement actual email sending
+        // For now, just log the code (remove in production)
+        \Log::info("Password reset code for {$email}: {$code}");
+        
+        // In production, you would use Laravel Mail here
+        // Mail::to($email)->send(new PasswordResetCodeMail($code));
+        
+        return true; // Assume email was sent successfully
     }
 
     /**

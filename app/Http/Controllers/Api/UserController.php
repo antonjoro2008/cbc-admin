@@ -34,6 +34,8 @@ class UserController extends Controller
         
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
+            'phone_number' => 'sometimes|string|max:15|regex:/^254[0-9]{9}$/|unique:users,phone_number,' . $user->id,
+            'email' => 'sometimes|nullable|string|email|max:255|unique:users,email,' . $user->id,
             'grade_level' => 'sometimes|string|max:50',
         ]);
 
@@ -46,7 +48,7 @@ class UserController extends Controller
         }
 
         try {
-            $user->update($request->only(['name', 'grade_level']));
+            $user->update($request->only(['name', 'phone_number', 'email', 'grade_level']));
             
             return response()->json([
                 'success' => true,
