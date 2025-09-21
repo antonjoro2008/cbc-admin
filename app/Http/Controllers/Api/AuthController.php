@@ -21,14 +21,19 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'phone_number' => ['required', 'string', 'max:15', 'unique:users', function ($attribute, $value, $fail) {
-                if (!$this->isValidMpesaNumber($value)) {
-                    $fail('Phone number must be a valid M-Pesa number with supported prefix.');
+            'phone_number' => [
+                'required',
+                'string',
+                'max:15',
+                'unique:users',
+                function ($attribute, $value, $fail) {
+                    if (!$this->isValidMpesaNumber($value)) {
+                        $fail('Phone number must be a valid M-Pesa number with supported prefix.');
+                    }
                 }
-            }],
+            ],
             'email' => 'nullable|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Password::defaults()],
-            'institution_id' => 'nullable|exists:institutions,id',
             'grade_level' => 'nullable|string|max:50',
             'user_type' => 'required|string|in:student,parent',
         ], [
@@ -40,7 +45,6 @@ class AuthController extends Controller
             'email.unique' => 'This email address is already registered. Please use a different email or try logging in.',
             'password.required' => 'A password is required.',
             'password.confirmed' => 'Password confirmation does not match.',
-            'institution_id.exists' => 'The selected institution does not exist.',
             'grade_level.max' => 'Grade level cannot exceed 50 characters.',
             'user_type.required' => 'User type is required.',
             'user_type.in' => 'User type must be either student or parent.',
@@ -60,7 +64,7 @@ class AuthController extends Controller
                 'phone_number' => $request->phone_number,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'institution_id' => $request->institution_id,
+                'institution_id' => null,
                 'grade_level' => $request->grade_level,
                 'user_type' => $request->user_type,
             ]);
@@ -84,7 +88,7 @@ class AuthController extends Controller
             $userData = $user->toArray();
 
             $userTypeLabel = ucfirst($request->user_type);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => $userTypeLabel . ' registered successfully',
@@ -116,11 +120,17 @@ class AuthController extends Controller
             'institution_phone' => 'required|string|max:20',
             'institution_address' => 'required|string|max:500',
             'admin_name' => 'required|string|max:255',
-            'admin_phone_number' => ['required', 'string', 'max:15', 'unique:users,phone_number', function ($attribute, $value, $fail) {
-                if (!$this->isValidMpesaNumber($value)) {
-                    $fail('Phone number must be a valid M-Pesa number with supported prefix.');
+            'admin_phone_number' => [
+                'required',
+                'string',
+                'max:15',
+                'unique:users,phone_number',
+                function ($attribute, $value, $fail) {
+                    if (!$this->isValidMpesaNumber($value)) {
+                        $fail('Phone number must be a valid M-Pesa number with supported prefix.');
+                    }
                 }
-            }],
+            ],
             'admin_email' => 'nullable|string|email|max:255|unique:users,email',
             'admin_password' => ['required', 'confirmed', Password::defaults()],
         ], [
@@ -489,10 +499,10 @@ class AuthController extends Controller
         // TODO: Implement actual email sending
         // For now, just log the code (remove in production)
         \Log::info("Password reset code for {$email}: {$code}");
-        
+
         // In production, you would use Laravel Mail here
         // Mail::to($email)->send(new PasswordResetCodeMail($code));
-        
+
         return true; // Assume email was sent successfully
     }
 
@@ -511,7 +521,7 @@ class AuthController extends Controller
         $recentAttempts = $this->getRecentAttempts($user);
 
         $effectiveWallet = $user->getEffectiveWallet();
-        
+
         return [
             'token_balance' => $effectiveWallet->balance ?? 0,
             'assessment_stats' => $assessmentStats,
@@ -618,11 +628,11 @@ class AuthController extends Controller
         $markedAttemptAnswers = \App\Models\AttemptAnswer::whereHas('attempt', function ($query) use ($userId) {
             $query->where('student_id', $userId);
         })
-        ->whereHas('feedback')
-        ->with(['question', 'feedback']);
+            ->whereHas('feedback')
+            ->with(['question', 'feedback']);
 
         $totalMarksAwarded = $markedAttemptAnswers->sum('marks_awarded');
-        
+
         // Get total possible marks for questions that were marked
         $totalPossibleMarks = $markedAttemptAnswers->get()->sum(function ($attemptAnswer) {
             return $attemptAnswer->question->marks;
@@ -642,12 +652,64 @@ class AuthController extends Controller
     {
         // Valid M-Pesa prefixes
         $validPrefixes = [
-            '254700', '254701', '254702', '254703', '254704', '254705', '254706', '254707', '254708', '254709',
-            '254710', '254711', '254712', '254713', '254714', '254715', '254716', '254717', '254718', '254719',
-            '254720', '254721', '254722', '254723', '254724', '254725', '254726', '254727', '254728', '254729',
-            '254740', '254741', '254742', '254743', '254745', '254746', '254748', '254757', '254758', '254759',
-            '254768', '254769', '254790', '254791', '254792', '254793', '254794', '254795', '254796', '254797',
-            '254798', '254799', '254110', '254111', '254112', '254113', '254114', '254115'
+            '254700',
+            '254701',
+            '254702',
+            '254703',
+            '254704',
+            '254705',
+            '254706',
+            '254707',
+            '254708',
+            '254709',
+            '254710',
+            '254711',
+            '254712',
+            '254713',
+            '254714',
+            '254715',
+            '254716',
+            '254717',
+            '254718',
+            '254719',
+            '254720',
+            '254721',
+            '254722',
+            '254723',
+            '254724',
+            '254725',
+            '254726',
+            '254727',
+            '254728',
+            '254729',
+            '254740',
+            '254741',
+            '254742',
+            '254743',
+            '254745',
+            '254746',
+            '254748',
+            '254757',
+            '254758',
+            '254759',
+            '254768',
+            '254769',
+            '254790',
+            '254791',
+            '254792',
+            '254793',
+            '254794',
+            '254795',
+            '254796',
+            '254797',
+            '254798',
+            '254799',
+            '254110',
+            '254111',
+            '254112',
+            '254113',
+            '254114',
+            '254115'
         ];
 
         // Check if phone number starts with any valid prefix
