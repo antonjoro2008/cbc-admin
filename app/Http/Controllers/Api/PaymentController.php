@@ -300,10 +300,10 @@ class PaymentController extends Controller
             // Create token transaction record
             TokenTransaction::create([
                 'wallet_id' => $wallet->id,
-                'type' => 'credit',
-                'amount' => $payment->tokens,
-                'description' => "Payment via {$payment->channel} - {$payment->tokens} tokens, {$minutesToCredit} minutes",
+                'transaction_type' => 'credit',
+                'tokens' => $payment->tokens,
                 'reference' => $payment->reference ?? $payment->id,
+                'description' => "Payment via {$payment->channel} - {$payment->tokens} tokens, {$minutesToCredit} minutes",
             ]);
             Log::info("Token transaction record created");
         } else {
