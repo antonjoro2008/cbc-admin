@@ -68,12 +68,10 @@ class AttemptAnswersRelationManager extends RelationManager
                         TextEntry::make('question.question_text')
                             ->label('Question')
                             ->html(),
-                        TextEntry::make('selected_answer')
-                            ->label('Selected Answer'),
-                        TextEntry::make('marks_obtained')
-                            ->label('Marks Obtained'),
-                        TextEntry::make('explanation')
-                            ->label('Explanation'),
+                TextEntry::make('student_answer_text')
+                    ->label('Student Answer'),
+                TextEntry::make('marks_awarded')
+                    ->label('Marks Awarded'),
                         IconEntry::make('is_correct')
                             ->label('Correct')
                             ->boolean(),
@@ -102,9 +100,8 @@ class AttemptAnswersRelationManager extends RelationManager
                         
                         return [
                             'question' => $attemptAnswer->question,
-                            'selected_answer' => $attemptAnswer->selected_answer,
-                            'marks_obtained' => $attemptAnswer->marks_obtained,
-                            'explanation' => $attemptAnswer->explanation,
+                            'student_answer_text' => $attemptAnswer->student_answer_text,
+                            'marks_awarded' => $attemptAnswer->marks_awarded,
                             'is_correct' => $attemptAnswer->is_correct,
                             'feedback' => $attemptAnswer->feedback->map(function ($feedback) {
                                 return [

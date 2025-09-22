@@ -113,11 +113,29 @@ class AttemptsRelationManager extends RelationManager
                                 IconEntry::make('is_correct')
                                     ->label('Correct')
                                     ->boolean(),
+                                RepeatableEntry::make('feedback')
+                                    ->label('Feedback')
+                                    ->schema([
+                                        TextEntry::make('feedback_text')
+                                            ->label('Feedback Text')
+                                            ->html(),
+                                        IconEntry::make('ai_generated')
+                                            ->label('AI Generated')
+                                            ->boolean(),
+                                        RepeatableEntry::make('media')
+                                            ->label('Feedback Media')
+                                            ->schema([
+                                                TextEntry::make('media_type')
+                                                    ->label('Media Type'),
+                                                TextEntry::make('media_url')
+                                                    ->label('Media URL'),
+                                            ]),
+                                    ]),
                             ]),
                     ])
                     ->fillForm(function ($record): array {
-                        // Load the attempt with its answers and questions
-                        $attempt = $record->load(['attemptAnswers.question', 'student']);
+                        // Load the attempt with its answers, questions, feedback, and feedback media
+                        $attempt = $record->load(['attemptAnswers.question', 'attemptAnswers.feedback.media', 'student']);
                         
                         return [
                             'student' => $attempt->student,
@@ -131,6 +149,18 @@ class AttemptsRelationManager extends RelationManager
                                     'student_answer_text' => $answer->student_answer_text,
                                     'marks_awarded' => $answer->marks_awarded,
                                     'is_correct' => $answer->is_correct,
+                                    'feedback' => $answer->feedback->map(function ($feedback) {
+                                        return [
+                                            'feedback_text' => $feedback->feedback_text,
+                                            'ai_generated' => $feedback->ai_generated,
+                                            'media' => $feedback->media->map(function ($media) {
+                                                return [
+                                                    'media_type' => $media->media_type,
+                                                    'media_url' => $media->media_url,
+                                                ];
+                                            })->toArray(),
+                                        ];
+                                    })->toArray(),
                                 ];
                             })->toArray(),
                         ];
