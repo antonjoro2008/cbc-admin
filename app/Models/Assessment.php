@@ -90,13 +90,24 @@ class Assessment extends Model
      */
     public function getSectionsWithQuestions()
     {
-        $sectionIds = $this->questions()->pluck('section_id')->unique();
-        return AssessmentSection::whereIn('id', $sectionIds)
-            ->with(['questions' => function ($query) {
-                $query->where('assessment_id', $this->id);
-            }])
+        // Get all questions for this assessment with their sections
+        $questions = $this->questions()->with('section')->get();
+        
+        // Group questions by section
+        $sectionsWithQuestions = $questions->groupBy('section_id');
+        
+        // Get unique sections and attach their questions
+        $sections = AssessmentSection::whereIn('id', $sectionsWithQuestions->keys())
             ->orderBy('section_order')
             ->get();
+        
+        // Attach the filtered questions to each section
+        $sections->each(function ($section) use ($sectionsWithQuestions) {
+            $sectionQuestions = $sectionsWithQuestions->get($section->id, collect());
+            $section->setRelation('questions', $sectionQuestions);
+        });
+        
+        return $sections;
     }
 
     /**
