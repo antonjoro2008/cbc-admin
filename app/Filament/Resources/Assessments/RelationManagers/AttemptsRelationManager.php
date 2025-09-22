@@ -46,14 +46,6 @@ class AttemptsRelationManager extends RelationManager
                         return $totalMarks ?: 'N/A';
                     })
                     ->sortable(false), // Can't sort computed columns
-                TextColumn::make('started_at')
-                    ->label('Started At')
-                    ->dateTime('d/m/Y H:iA')
-                    ->sortable(),
-                TextColumn::make('completed_at')
-                    ->label('Completed At')
-                    ->dateTime('d/m/Y H:iA')
-                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('attempt_number')
@@ -88,6 +80,7 @@ class AttemptsRelationManager extends RelationManager
                     ->slideOver()
                     ->modalHeading('Attempt Answers')
                     ->modalWidth('4xl')
+                    ->submitAction(false)
                     ->infolist([
                         Section::make('Attempt Details')
                             ->schema([
