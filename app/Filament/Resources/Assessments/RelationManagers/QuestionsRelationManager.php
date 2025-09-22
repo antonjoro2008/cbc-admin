@@ -133,6 +133,44 @@ class QuestionsRelationManager extends RelationManager
                                     ->label('Explanation')
                                     ->placeholder('Enter explanation for this answer...')
                                     ->columnSpanFull(),
+                                
+                                // Nested media repeater for this answer
+                                Repeater::make('answer_media')
+                                    ->label('Answer Media')
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                Select::make('media_type')
+                                                    ->label('Media Type')
+                                                    ->options([
+                                                        'image' => 'Image',
+                                                        'video' => 'Video',
+                                                        'audio' => 'Audio',
+                                                        'pdf' => 'PDF Document',
+                                                        'doc' => 'Word Document',
+                                                    ])
+                                                    ->placeholder('Select media type...'),
+                                                FileUpload::make('file_path')
+                                                    ->label('File')
+                                                    ->disk('public')
+                                                    ->directory('answer-media')
+                                                    ->visibility('public')
+                                                    ->required(),
+                                            ]),
+                                        Textarea::make('caption')
+                                            ->label('Caption')
+                                            ->rows(2)
+                                            ->placeholder('Enter caption for this media...')
+                                            ->columnSpanFull(),
+                                    ])
+                                    ->defaultItems(0)
+                                    ->minItems(0)
+                                    ->maxItems(5)
+                                    ->addActionLabel('Add Media')
+                                    ->reorderable(true)
+                                    ->collapsible()
+                                    ->itemLabel(fn (array $state): ?string => $state['media_type'] ?? 'Media Item')
+                                    ->columnSpanFull(),
                             ])
                             ->defaultItems(2)
                             ->minItems(1)
@@ -140,6 +178,7 @@ class QuestionsRelationManager extends RelationManager
                             ->addActionLabel('Add Answer')
                             ->reorderable(true)
                             ->collapsible()
+                            ->itemLabel(fn (array $state): ?string => $state['answer_text'] ?? 'Answer')
                             ->columnSpanFull(),
                         Repeater::make('media')
                             ->label('Question Media')
@@ -186,11 +225,24 @@ class QuestionsRelationManager extends RelationManager
                         // Create answers for the question
                         if (isset($data['answers']) && is_array($data['answers'])) {
                             foreach ($data['answers'] as $answerData) {
-                                $record->answers()->create([
+                                $answer = $record->answers()->create([
                                     'answer_text' => $answerData['answer_text'],
                                     'is_correct' => $answerData['is_correct'] ?? false,
                                     'explanation' => $answerData['explanation'] ?? null,
                                 ]);
+                                
+                                // Create answer media if provided
+                                if (isset($answerData['answer_media']) && is_array($answerData['answer_media'])) {
+                                    foreach ($answerData['answer_media'] as $mediaData) {
+                                        if (!empty($mediaData['file_path']) && !empty($mediaData['media_type'])) {
+                                            $answer->media()->create([
+                                                'media_type' => $mediaData['media_type'],
+                                                'file_path' => $mediaData['file_path'],
+                                                'caption' => $mediaData['caption'] ?? null,
+                                            ]);
+                                        }
+                                    }
+                                }
                             }
                         }
                         
@@ -213,15 +265,25 @@ class QuestionsRelationManager extends RelationManager
                     ->modalHeading('Edit Question')
                     ->modalWidth('4xl')
                     ->fillForm(function ($record): array {
-                        // Load the question with its answers and media
-                        $question = $record->load(['answers', 'media']);
+                        // Load the question with its answers, answer media, and question media
+                        $question = $record->load(['answers.media', 'media']);
                         
-                        // Map the answers to the repeater format
+                        // Map the answers to the repeater format including nested answer media
                         $answers = $question->answers->map(function ($answer) {
+                            // Map answer media to the nested repeater format
+                            $answerMedia = $answer->media->map(function ($mediaItem) {
+                                return [
+                                    'media_type' => $mediaItem->media_type,
+                                    'file_path' => $mediaItem->file_path,
+                                    'caption' => $mediaItem->caption,
+                                ];
+                            })->toArray();
+                            
                             return [
                                 'answer_text' => $answer->answer_text,
                                 'is_correct' => $answer->is_correct,
                                 'explanation' => $answer->explanation,
+                                'answer_media' => $answerMedia,
                             ];
                         })->toArray();
                         
@@ -310,6 +372,44 @@ class QuestionsRelationManager extends RelationManager
                                     ->label('Explanation')
                                     ->placeholder('Enter explanation for this answer...')
                                     ->columnSpanFull(),
+                                
+                                // Nested media repeater for this answer
+                                Repeater::make('answer_media')
+                                    ->label('Answer Media')
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                Select::make('media_type')
+                                                    ->label('Media Type')
+                                                    ->options([
+                                                        'image' => 'Image',
+                                                        'video' => 'Video',
+                                                        'audio' => 'Audio',
+                                                        'pdf' => 'PDF Document',
+                                                        'doc' => 'Word Document',
+                                                    ])
+                                                    ->placeholder('Select media type...'),
+                                                FileUpload::make('file_path')
+                                                    ->label('File')
+                                                    ->disk('public')
+                                                    ->directory('answer-media')
+                                                    ->visibility('public')
+                                                    ->required(),
+                                            ]),
+                                        Textarea::make('caption')
+                                            ->label('Caption')
+                                            ->rows(2)
+                                            ->placeholder('Enter caption for this media...')
+                                            ->columnSpanFull(),
+                                    ])
+                                    ->defaultItems(0)
+                                    ->minItems(0)
+                                    ->maxItems(5)
+                                    ->addActionLabel('Add Media')
+                                    ->reorderable(true)
+                                    ->collapsible()
+                                    ->itemLabel(fn (array $state): ?string => $state['media_type'] ?? 'Media Item')
+                                    ->columnSpanFull(),
                             ])
                             ->defaultItems(2)
                             ->minItems(1)
@@ -317,6 +417,7 @@ class QuestionsRelationManager extends RelationManager
                             ->addActionLabel('Add Answer')
                             ->reorderable(true)
                             ->collapsible()
+                            ->itemLabel(fn (array $state): ?string => $state['answer_text'] ?? 'Answer')
                             ->columnSpanFull(),
                         Repeater::make('media')
                             ->label('Question Media')
@@ -357,16 +458,29 @@ class QuestionsRelationManager extends RelationManager
                     ->after(function (array $data, $record): void {
                         // Update answers for the question
                         if (isset($data['answers']) && is_array($data['answers'])) {
-                            // Delete existing answers
+                            // Delete existing answers (this will cascade delete answer media)
                             $record->answers()->delete();
                             
                             // Create new answers
                             foreach ($data['answers'] as $answerData) {
-                                $record->answers()->create([
+                                $answer = $record->answers()->create([
                                     'answer_text' => $answerData['answer_text'],
                                     'is_correct' => $answerData['is_correct'] ?? false,
                                     'explanation' => $answerData['explanation'] ?? null,
                                 ]);
+                                
+                                // Create answer media if provided
+                                if (isset($answerData['answer_media']) && is_array($answerData['answer_media'])) {
+                                    foreach ($answerData['answer_media'] as $mediaData) {
+                                        if (!empty($mediaData['file_path']) && !empty($mediaData['media_type'])) {
+                                            $answer->media()->create([
+                                                'media_type' => $mediaData['media_type'],
+                                                'file_path' => $mediaData['file_path'],
+                                                'caption' => $mediaData['caption'] ?? null,
+                                            ]);
+                                        }
+                                    }
+                                }
                             }
                         }
                         
