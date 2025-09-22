@@ -8,6 +8,8 @@ use App\Models\Answer;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\RichEditor;
@@ -19,6 +21,11 @@ use Filament\Schemas\Components\Grid;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\IconEntry;
 
 class QuestionsRelationManager extends RelationManager
 {
@@ -261,7 +268,8 @@ class QuestionsRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                EditAction::make()
+                ActionGroup::make([
+                    EditAction::make()
                     ->modalHeading('Edit Question')
                     ->modalWidth('4xl')
                     ->fillForm(function ($record): array {
@@ -501,7 +509,108 @@ class QuestionsRelationManager extends RelationManager
                             }
                         }
                     }),
-                DeleteAction::make(),
+                    DeleteAction::make(),
+                    
+                    // Media Action - Shows question media in popup
+                    ViewAction::make()
+                        ->label('Media')
+                        ->modalHeading('Question Media')
+                        ->modalWidth('4xl')
+                        ->infolist([
+                            TextEntry::make('question_text')
+                                ->label('Question')
+                                ->html()
+                                ->columnSpanFull(),
+                            RepeatableEntry::make('media')
+                                ->label('Media Files')
+                                ->schema([
+                                    TextEntry::make('media_type')
+                                        ->label('Type')
+                                        ->badge()
+                                        ->color(fn (string $state): string => match ($state) {
+                                            'image' => 'success',
+                                            'video' => 'info',
+                                            'audio' => 'warning',
+                                            'pdf' => 'danger',
+                                            'doc' => 'primary',
+                                            default => 'gray',
+                                        }),
+                                    TextEntry::make('file_path')
+                                        ->label('File')
+                                        ->url(fn ($record): string => asset('storage/' . $record->file_path))
+                                        ->openUrlInNewTab(),
+                                    TextEntry::make('caption')
+                                        ->label('Caption')
+                                        ->placeholder('No caption provided'),
+                                ])
+                                ->columns(3)
+                                ->emptyStateHeading('No media files')
+                                ->emptyStateDescription('This question has no associated media files.')
+                                ->columnSpanFull(),
+                        ]),
+                    
+                    // Answers Action - Shows question answers in popup
+                    ViewAction::make()
+                        ->label('Answers')
+                        ->modalHeading('Question Answers')
+                        ->modalWidth('4xl')
+                        ->infolist([
+                            TextEntry::make('question_text')
+                                ->label('Question')
+                                ->html()
+                                ->columnSpanFull(),
+                            RepeatableEntry::make('answers')
+                                ->label('Answers')
+                                ->schema([
+                                    TextEntry::make('answer_text')
+                                        ->label('Answer')
+                                        ->html(),
+                                    IconEntry::make('is_correct')
+                                        ->label('Correct')
+                                        ->boolean()
+                                        ->trueIcon('heroicon-o-check-circle')
+                                        ->falseIcon('heroicon-o-x-circle')
+                                        ->trueColor('success')
+                                        ->falseColor('danger'),
+                                    TextEntry::make('explanation')
+                                        ->label('Explanation')
+                                        ->html()
+                                        ->placeholder('No explanation provided'),
+                                    
+                                    // Show answer media if any
+                                    RepeatableEntry::make('media')
+                                        ->label('Answer Media')
+                                        ->schema([
+                                            TextEntry::make('media_type')
+                                                ->label('Type')
+                                                ->badge()
+                                                ->color(fn (string $state): string => match ($state) {
+                                                    'image' => 'success',
+                                                    'video' => 'info',
+                                                    'audio' => 'warning',
+                                                    'pdf' => 'danger',
+                                                    'doc' => 'primary',
+                                                    default => 'gray',
+                                                }),
+                                            TextEntry::make('file_path')
+                                                ->label('File')
+                                                ->url(fn ($record): string => asset('storage/' . $record->file_path))
+                                                ->openUrlInNewTab(),
+                                            TextEntry::make('caption')
+                                                ->label('Caption')
+                                                ->placeholder('No caption provided'),
+                                        ])
+                                        ->columns(3)
+                                        ->emptyStateHeading('No media files')
+                                        ->emptyStateDescription('This answer has no associated media files.')
+                                        ->columnSpanFull(),
+                                ])
+                                ->columns(2)
+                                ->emptyStateHeading('No answers')
+                                ->emptyStateDescription('This question has no answers yet.')
+                                ->columnSpanFull(),
+                        ]),
+                ])
             ])
             ->defaultSort('question_number', 'asc')
             ->modifyQueryUsing(function ($query) {
