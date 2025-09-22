@@ -10,28 +10,4 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
-/* Custom styling for Questions Relation Manager */
-.answers-section .fi-fo-field-wrp-label {
-    color: #059669 !important;
-    font-weight: 600 !important;
-}
-
-.media-section .fi-fo-field-wrp-label {
-    color: #dc2626 !important;
-    font-weight: 600 !important;
-}
-
-.answers-action {
-    color: #059669 !important;
-    font-weight: 600 !important;
-}
-
-.media-action {
-    color: #dc2626 !important;
-    font-weight: 600 !important;
-}
-
-.answers-entry .fi-in-entry-label {
-    color: #059669 !important;
-    font-weight: 600 !important;
-}
+/* Custom styling for Questions Relation Manager - temporarily disabled for debugging */

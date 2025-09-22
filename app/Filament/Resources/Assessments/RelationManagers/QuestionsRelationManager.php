@@ -73,7 +73,6 @@ class QuestionsRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('Add Question')
-                    ->slideOver()
                     ->modalHeading('Add New Question')
                     ->modalWidth('4xl')
                     ->form([
@@ -275,7 +274,6 @@ class QuestionsRelationManager extends RelationManager
                     EditAction::make()
                         ->modalHeading('Edit Question')
                         ->modalWidth('4xl')
-                        ->slideOver()
                         ->fillForm(function ($record): array {
                             // Load the question with its answers, answer media, and question media
                             $question = $record->load(['answers.media', 'media']);
@@ -520,7 +518,6 @@ class QuestionsRelationManager extends RelationManager
                     Action::make('view_media')
                         ->label('🎬 Media')
                         ->extraAttributes(['class' => 'media-action'])
-                        ->slideOver()
                         ->modalHeading('Question Media')
                         ->modalWidth('4xl')
                         ->infolist([
@@ -558,7 +555,6 @@ class QuestionsRelationManager extends RelationManager
                     Action::make('view_answers')
                         ->label('📝 Answers')
                         ->extraAttributes(['class' => 'answers-action'])
-                        ->slideOver()
                         ->modalHeading('Question Answers')
                         ->modalWidth('4xl')
                         ->infolist([
