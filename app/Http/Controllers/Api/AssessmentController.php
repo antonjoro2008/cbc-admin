@@ -93,10 +93,13 @@ class AssessmentController extends Controller
 
         $assessment->load([
             'subject',
-            'creator.institution',
-            'sections.questions.media',
-            'sections.questions.answers'
+            'creator.institution'
         ]);
+
+        // Get sections with their questions for this assessment
+        $sections = $assessment->getSectionsWithQuestions();
+        $sections->load(['questions.media', 'questions.answers']);
+        $assessment->setRelation('sections', $sections);
 
         return response()->json([
             'success' => true,
@@ -242,7 +245,7 @@ class AssessmentController extends Controller
         $query = Assessment::whereHas('creator', function ($q) use ($user) {
             $q->where('institution_id', $user->institution_id);
         })
-            ->with(['subject', 'creator', 'sections', 'questions'])
+            ->with(['subject', 'creator', 'questions'])
             ->orderBy('created_at', 'desc');
 
         // Apply filters
@@ -267,6 +270,13 @@ class AssessmentController extends Controller
         }
 
         $assessments = $query->paginate($request->get('per_page', 20));
+
+        // Add sections to each assessment
+        $assessments->getCollection()->transform(function ($assessment) {
+            $sections = $assessment->getSectionsWithQuestions();
+            $assessment->setRelation('sections', $sections);
+            return $assessment;
+        });
 
         return response()->json([
             'success' => true,

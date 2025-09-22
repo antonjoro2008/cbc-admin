@@ -84,6 +84,22 @@ class Assessment extends Model
     }
 
     /**
+     * Get sections with their questions for this assessment.
+     * This method provides a more reliable way to get sections with questions
+     * when using eager loading.
+     */
+    public function getSectionsWithQuestions()
+    {
+        $sectionIds = $this->questions()->pluck('section_id')->unique();
+        return AssessmentSection::whereIn('id', $sectionIds)
+            ->with(['questions' => function ($query) {
+                $query->where('assessment_id', $this->id);
+            }])
+            ->orderBy('section_order')
+            ->get();
+    }
+
+    /**
      * Get the questions for the assessment.
      */
     public function questions(): HasMany
