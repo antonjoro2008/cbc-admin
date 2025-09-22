@@ -91,7 +91,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => $userTypeLabel . ' registered successfully',
+                'message' => "$userTypeLabel registered successfully",
                 'data' => [
                     'user' => $userData,
                     'access_token' => $token,
@@ -563,7 +563,7 @@ class AuthController extends Controller
      */
     private function getRecentAssessments($user)
     {
-        if ($user->isStudent()) {
+        if ($user->isStudent() || $user->isParent()) {
             $assessments = \App\Models\Assessment::whereHas('attempts', function ($query) use ($user) {
                 $query->where('student_id', $user->id);
             })
