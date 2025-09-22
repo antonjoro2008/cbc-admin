@@ -5,11 +5,15 @@ namespace App\Filament\Resources\Assessments\RelationManagers;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Actions\Action;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\IconEntry;
 
 class AttemptsRelationManager extends RelationManager
 {
@@ -76,6 +80,67 @@ class AttemptsRelationManager extends RelationManager
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
+                Action::make('answers')
+                    ->label('Answers')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->slideOver()
+                    ->modalHeading('Attempt Answers')
+                    ->modalWidth('6xl')
+                    ->infolist([
+                        TextEntry::make('student.name')
+                            ->label('Student'),
+                        TextEntry::make('attempt_number')
+                            ->label('Attempt Number'),
+                        TextEntry::make('score')
+                            ->label('Score'),
+                        TextEntry::make('started_at')
+                            ->label('Started At')
+                            ->dateTime('d/m/Y H:i A'),
+                        TextEntry::make('completed_at')
+                            ->label('Completed At')
+                            ->dateTime('d/m/Y H:i A'),
+                        RepeatableEntry::make('attemptAnswers')
+                            ->label('Answers')
+                            ->schema([
+                                TextEntry::make('question.question_text')
+                                    ->label('Question')
+                                    ->html(),
+                                TextEntry::make('selected_answer')
+                                    ->label('Selected Answer'),
+                                TextEntry::make('marks_obtained')
+                                    ->label('Marks Obtained'),
+                                TextEntry::make('explanation')
+                                    ->label('Explanation'),
+                                IconEntry::make('is_correct')
+                                    ->label('Correct')
+                                    ->boolean(),
+                                IconEntry::make('is_active')
+                                    ->label('Active')
+                                    ->boolean(),
+                            ]),
+                    ])
+                    ->fillForm(function ($record): array {
+                        // Load the attempt with its answers and questions
+                        $attempt = $record->load(['attemptAnswers.question', 'student']);
+                        
+                        return [
+                            'student' => $attempt->student,
+                            'attempt_number' => $attempt->attempt_number,
+                            'score' => $attempt->score,
+                            'started_at' => $attempt->started_at,
+                            'completed_at' => $attempt->completed_at,
+                            'attemptAnswers' => $attempt->attemptAnswers->map(function ($answer) {
+                                return [
+                                    'question' => $answer->question,
+                                    'selected_answer' => $answer->selected_answer,
+                                    'marks_obtained' => $answer->marks_obtained,
+                                    'explanation' => $answer->explanation,
+                                    'is_correct' => $answer->is_correct,
+                                    'is_active' => $answer->is_active,
+                                ];
+                            })->toArray(),
+                        ];
+                    }),
             ])
             ->headerActions([
                 CreateAction::make(),

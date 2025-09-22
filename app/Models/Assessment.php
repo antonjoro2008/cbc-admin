@@ -127,4 +127,19 @@ class Assessment extends Model
         return $this->hasMany(AssessmentAttempt::class);
     }
 
+    /**
+     * Get the attempt answers for the assessment through attempts.
+     */
+    public function attemptAnswers()
+    {
+        return $this->hasManyThrough(
+            AttemptAnswer::class,
+            AssessmentAttempt::class,
+            'assessment_id', // Foreign key on assessment_attempts table
+            'attempt_id', // Foreign key on attempt_answers table
+            'id', // Local key on assessments table
+            'id' // Local key on assessment_attempts table
+        );
+    }
+
 }
