@@ -22,11 +22,11 @@ class AssessmentSectionResource extends Resource
 {
     protected static ?string $model = AssessmentSection::class;
 
-    protected static ?string $navigationLabel = 'Assessment Sections';
+    protected static ?string $navigationLabel = 'Sections';
 
-    protected static ?string $modelLabel = 'Assessment Section';
+    protected static ?string $modelLabel = 'Section';
 
-    protected static ?string $pluralModelLabel = 'Assessment Sections';
+    protected static ?string $pluralModelLabel = 'Sections';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
     protected static string|UnitEnum|null $navigationGroup = 'Assessments';
