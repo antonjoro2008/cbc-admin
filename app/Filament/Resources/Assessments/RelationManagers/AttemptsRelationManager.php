@@ -80,7 +80,7 @@ class AttemptsRelationManager extends RelationManager
                     ->slideOver()
                     ->modalHeading('Attempt Answers')
                     ->modalWidth('4xl')
-                    ->submitAction(false)
+                    ->modalSubmitAction(false)
                     ->infolist([
                         Section::make('Attempt Details')
                             ->schema([
