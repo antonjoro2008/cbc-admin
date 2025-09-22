@@ -34,7 +34,7 @@ class AssessmentAttemptsTable
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('attempt_number')
-                    ->label('Attempt Number')
+                    ->label('Attempt #')
                     ->sortable(),
                 TextColumn::make('score')
                     ->label('Score')
