@@ -106,17 +106,12 @@ class AttemptsRelationManager extends RelationManager
                                 TextEntry::make('question.question_text')
                                     ->label('Question')
                                     ->html(),
-                                TextEntry::make('selected_answer')
-                                    ->label('Selected Answer'),
-                                TextEntry::make('marks_obtained')
-                                    ->label('Marks Obtained'),
-                                TextEntry::make('explanation')
-                                    ->label('Explanation'),
+                                TextEntry::make('student_answer_text')
+                                    ->label('Student Answer'),
+                                TextEntry::make('marks_awarded')
+                                    ->label('Marks Awarded'),
                                 IconEntry::make('is_correct')
                                     ->label('Correct')
-                                    ->boolean(),
-                                IconEntry::make('is_active')
-                                    ->label('Active')
                                     ->boolean(),
                             ]),
                     ])
@@ -133,11 +128,9 @@ class AttemptsRelationManager extends RelationManager
                             'attemptAnswers' => $attempt->attemptAnswers->map(function ($answer) {
                                 return [
                                     'question' => $answer->question,
-                                    'selected_answer' => $answer->selected_answer,
-                                    'marks_obtained' => $answer->marks_obtained,
-                                    'explanation' => $answer->explanation,
+                                    'student_answer_text' => $answer->student_answer_text,
+                                    'marks_awarded' => $answer->marks_awarded,
                                     'is_correct' => $answer->is_correct,
-                                    'is_active' => $answer->is_active,
                                 ];
                             })->toArray(),
                         ];
