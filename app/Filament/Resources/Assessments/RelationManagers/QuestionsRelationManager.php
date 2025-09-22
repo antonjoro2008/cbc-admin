@@ -161,19 +161,8 @@ class QuestionsRelationManager extends RelationManager
                                             ->label('File')
                                             ->disk('public')
                                             ->directory('question-media')
-                                            ->acceptedFileTypes(function ($get) {
-                                                $mediaType = $get('media_type');
-                                                return match($mediaType) {
-                                                    'image' => ['image/*'],
-                                                    'video' => ['video/*'],
-                                                    'audio' => ['audio/*'],
-                                                    'pdf' => ['application/pdf'],
-                                                    'doc' => ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-                                                    default => ['*']
-                                                };
-                                            })
-                                            ->required()
-                                            ->live(),
+                                            ->acceptedFileTypes(['*'])
+                                            ->required(),
                                     ]),
                                 Textarea::make('caption')
                                     ->label('Caption')
@@ -350,19 +339,8 @@ class QuestionsRelationManager extends RelationManager
                                             ->label('File')
                                             ->disk('public')
                                             ->directory('question-media')
-                                            ->acceptedFileTypes(function ($get) {
-                                                $mediaType = $get('media_type');
-                                                return match($mediaType) {
-                                                    'image' => ['image/*'],
-                                                    'video' => ['video/*'],
-                                                    'audio' => ['audio/*'],
-                                                    'pdf' => ['application/pdf'],
-                                                    'doc' => ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-                                                    default => ['*']
-                                                };
-                                            })
-                                            ->required()
-                                            ->live(),
+                                            ->acceptedFileTypes(['*'])
+                                            ->required(),
                                     ]),
                                 Textarea::make('caption')
                                     ->label('Caption')
