@@ -133,7 +133,6 @@ class QuestionsRelationManager extends RelationManager
                             ->minItems(1)
                             ->maxItems(10)
                             ->addActionLabel('Add Answer')
-                            ->deleteActionLabel('Remove Answer')
                             ->reorderable(true)
                             ->collapsible()
                             ->columnSpanFull(),
@@ -230,7 +229,6 @@ class QuestionsRelationManager extends RelationManager
                             ->minItems(1)
                             ->maxItems(10)
                             ->addActionLabel('Add Answer')
-                            ->deleteActionLabel('Remove Answer')
                             ->reorderable(true)
                             ->collapsible()
                             ->columnSpanFull(),
