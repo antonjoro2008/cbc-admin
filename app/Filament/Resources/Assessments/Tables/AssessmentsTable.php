@@ -28,18 +28,9 @@ class AssessmentsTable
                 TextColumn::make('grade_level')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('paper_code')
-                    ->searchable(),
-                TextColumn::make('year')
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('exam_body')
-                    ->searchable(),
                 TextColumn::make('duration_minutes')
                     ->label('Duration (min)')
                     ->sortable(),
-                ToggleColumn::make('uses_answer_sheet')
-                    ->label('Answer Sheet'),
                 TextColumn::make('status')
                     ->label('Status')
                     ->formatStateUsing(function ($state) {

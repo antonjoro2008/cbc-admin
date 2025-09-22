@@ -91,7 +91,7 @@ class Assessment extends Model
     public function getSectionsWithQuestions()
     {
         // Get all questions for this assessment with their media and answers
-        $questions = $this->questions()->with(['section', 'media', 'answers'])->get();
+        $questions = $this->questions()->with(['section', 'media', 'answers'])->orderBy('question_number')->get();
         
         // Group questions by section
         $sectionsWithQuestions = $questions->groupBy('section_id');
@@ -103,7 +103,8 @@ class Assessment extends Model
         
         // Attach the filtered questions to each section
         $sections->each(function ($section) use ($sectionsWithQuestions) {
-            $sectionQuestions = $sectionsWithQuestions->get($section->id, collect());
+            $sectionQuestions = $sectionsWithQuestions->get($section->id, collect())
+                ->sortBy('question_number');
             $section->setRelation('questions', $sectionQuestions);
         });
         
@@ -115,7 +116,7 @@ class Assessment extends Model
      */
     public function questions(): HasMany
     {
-        return $this->hasMany(Question::class);
+        return $this->hasMany(Question::class)->orderBy('question_number');
     }
 
     /**

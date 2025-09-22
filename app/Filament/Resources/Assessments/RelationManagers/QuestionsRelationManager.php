@@ -50,6 +50,7 @@ class QuestionsRelationManager extends RelationManager
                 TextColumn::make('question_text')
                     ->label('Question')
                     ->limit(50)
+                    ->wrap()
                     ->html(),
                 TextColumn::make('section.title')
                     ->label('Section')
