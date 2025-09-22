@@ -4,12 +4,16 @@ namespace App\Filament\Resources\Assessments\RelationManagers;
 
 use App\Models\AssessmentSection;
 use App\Models\Question;
+use App\Models\Answer;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Repeater;
 use Filament\Schemas\Components\Grid;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
@@ -106,11 +110,50 @@ class QuestionsRelationManager extends RelationManager
                             ->required()
                             ->placeholder('Enter the question text...')
                             ->columnSpanFull(),
+                        Repeater::make('answers')
+                            ->label('Answers')
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        Textarea::make('answer_text')
+                                            ->label('Answer Text')
+                                            ->rows(3)
+                                            ->required()
+                                            ->placeholder('Enter answer text...'),
+                                        Toggle::make('is_correct')
+                                            ->label('Correct Answer')
+                                            ->default(false),
+                                    ]),
+                                RichEditor::make('explanation')
+                                    ->label('Explanation')
+                                    ->placeholder('Enter explanation for this answer...')
+                                    ->columnSpanFull(),
+                            ])
+                            ->defaultItems(2)
+                            ->minItems(1)
+                            ->maxItems(10)
+                            ->addActionLabel('Add Answer')
+                            ->deleteActionLabel('Remove Answer')
+                            ->reorderable(true)
+                            ->collapsible()
+                            ->columnSpanFull(),
                     ])
                     ->mutateFormDataUsing(function (array $data, RelationManager $livewire): array {
                         // Automatically set the assessment_id
                         $data['assessment_id'] = $livewire->ownerRecord->id;
                         return $data;
+                    })
+                    ->after(function (array $data, $record): void {
+                        // Create answers for the question
+                        if (isset($data['answers']) && is_array($data['answers'])) {
+                            foreach ($data['answers'] as $answerData) {
+                                $record->answers()->create([
+                                    'answer_text' => $answerData['answer_text'],
+                                    'is_correct' => $answerData['is_correct'] ?? false,
+                                    'explanation' => $answerData['explanation'] ?? null,
+                                ]);
+                            }
+                        }
                     }),
             ])
             ->actions([
@@ -164,7 +207,50 @@ class QuestionsRelationManager extends RelationManager
                             ->required()
                             ->placeholder('Enter the question text...')
                             ->columnSpanFull(),
-                    ]),
+                        Repeater::make('answers')
+                            ->label('Answers')
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        Textarea::make('answer_text')
+                                            ->label('Answer Text')
+                                            ->rows(3)
+                                            ->required()
+                                            ->placeholder('Enter answer text...'),
+                                        Toggle::make('is_correct')
+                                            ->label('Correct Answer')
+                                            ->default(false),
+                                    ]),
+                                RichEditor::make('explanation')
+                                    ->label('Explanation')
+                                    ->placeholder('Enter explanation for this answer...')
+                                    ->columnSpanFull(),
+                            ])
+                            ->defaultItems(2)
+                            ->minItems(1)
+                            ->maxItems(10)
+                            ->addActionLabel('Add Answer')
+                            ->deleteActionLabel('Remove Answer')
+                            ->reorderable(true)
+                            ->collapsible()
+                            ->columnSpanFull(),
+                    ])
+                    ->after(function (array $data, $record): void {
+                        // Update answers for the question
+                        if (isset($data['answers']) && is_array($data['answers'])) {
+                            // Delete existing answers
+                            $record->answers()->delete();
+                            
+                            // Create new answers
+                            foreach ($data['answers'] as $answerData) {
+                                $record->answers()->create([
+                                    'answer_text' => $answerData['answer_text'],
+                                    'is_correct' => $answerData['is_correct'] ?? false,
+                                    'explanation' => $answerData['explanation'] ?? null,
+                                ]);
+                            }
+                        }
+                    }),
                 DeleteAction::make(),
             ])
             ->defaultSort('question_number');
