@@ -91,7 +91,7 @@ class Assessment extends Model
     public function getSectionsWithQuestions()
     {
         // Get all questions for this assessment with their media and answers
-        $questions = $this->questions()->orderBy('question_number')->with(['section', 'media', 'answers'])->get();
+        $questions = $this->questions()->with(['section', 'media', 'answers'])->orderByRaw('CAST(question_number AS UNSIGNED)')->get();
         
         // Group questions by section
         $sectionsWithQuestions = $questions->groupBy('section_id');
@@ -116,7 +116,7 @@ class Assessment extends Model
      */
     public function questions(): HasMany
     {
-        return $this->hasMany(Question::class)->orderBy('question_number');
+        return $this->hasMany(Question::class)->orderByRaw('CAST(question_number AS UNSIGNED)');
     }
 
     /**

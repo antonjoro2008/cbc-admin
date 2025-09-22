@@ -31,6 +31,9 @@ class QuestionsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function ($query) {
+                $query->with('answers');
+            })
             ->columns([
                 TextColumn::make('question_number')
                     ->label('Question #')
@@ -160,6 +163,29 @@ class QuestionsRelationManager extends RelationManager
                 EditAction::make()
                     ->modalHeading('Edit Question')
                     ->modalWidth('4xl')
+                    ->fillForm(function ($record): array {
+                        // Load the question with its answers
+                        $question = $record->load('answers');
+                        
+                        // Map the answers to the repeater format
+                        $answers = $question->answers->map(function ($answer) {
+                            return [
+                                'answer_text' => $answer->answer_text,
+                                'is_correct' => $answer->is_correct,
+                                'explanation' => $answer->explanation,
+                            ];
+                        })->toArray();
+                        
+                        return [
+                            'section_id' => $question->section_id,
+                            'question_number' => $question->question_number,
+                            'marks' => $question->marks,
+                            'question_type' => $question->question_type,
+                            'parent_question_id' => $question->parent_question_id,
+                            'question_text' => $question->question_text,
+                            'answers' => $answers,
+                        ];
+                    })
                     ->form([
                         Grid::make(2)
                             ->schema([
@@ -252,6 +278,9 @@ class QuestionsRelationManager extends RelationManager
                     }),
                 DeleteAction::make(),
             ])
-            ->defaultSort('question_number');
+            ->defaultSort('question_number', 'asc')
+            ->modifyQueryUsing(function ($query) {
+                $query->orderByRaw('CAST(question_number AS UNSIGNED)');
+            });
     }
 }

@@ -33,6 +33,7 @@ class Question extends Model
      */
     protected $casts = [
         'marks' => 'integer',
+        'question_number' => 'integer',
     ];
 
     /**
