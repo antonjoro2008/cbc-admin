@@ -125,7 +125,7 @@ class QuestionsRelationManager extends RelationManager
                             ->columnSpanFull(),
                         Repeater::make('answers')
                             ->label('📝 Answers')
-                            ->extraAttributes(['class' => 'text-emerald-600 font-semibold'])
+                            ->extraAttributes(['class' => 'answers-section'])
                             ->schema([
                                 Grid::make(2)
                                     ->schema([
@@ -191,7 +191,7 @@ class QuestionsRelationManager extends RelationManager
                             ->columnSpanFull(),
                         Repeater::make('media')
                             ->label('🎬 Question Media')
-                            ->extraAttributes(['class' => 'text-red-600 font-semibold'])
+                            ->extraAttributes(['class' => 'media-section'])
                             ->schema([
                                 Grid::make(2)
                                     ->schema([
@@ -368,7 +368,7 @@ class QuestionsRelationManager extends RelationManager
                                 ->columnSpanFull(),
                             Repeater::make('answers')
                                 ->label('📝 Answers')
-                                ->extraAttributes(['class' => 'text-emerald-600 font-semibold'])
+                                ->extraAttributes(['class' => 'answers-section'])
                                 ->schema([
                                     Grid::make(2)
                                         ->schema([
@@ -434,7 +434,7 @@ class QuestionsRelationManager extends RelationManager
                                 ->columnSpanFull(),
                             Repeater::make('media')
                                 ->label('🎬 Question Media')
-                                ->extraAttributes(['class' => 'text-red-600 font-semibold'])
+                                ->extraAttributes(['class' => 'media-section'])
                                 ->schema([
                                     Grid::make(2)
                                         ->schema([
@@ -519,7 +519,7 @@ class QuestionsRelationManager extends RelationManager
                     // Media Action - Shows question media in slideOver
                     Action::make('view_media')
                         ->label('🎬 Media')
-                        ->extraAttributes(['class' => 'text-red-600 font-semibold'])
+                        ->extraAttributes(['class' => 'media-action'])
                         ->slideOver()
                         ->modalHeading('Question Media')
                         ->modalWidth('4xl')
@@ -557,7 +557,7 @@ class QuestionsRelationManager extends RelationManager
                     // Answers Action - Shows question answers in slideOver
                     Action::make('view_answers')
                         ->label('📝 Answers')
-                        ->extraAttributes(['class' => 'text-emerald-600 font-semibold'])
+                        ->extraAttributes(['class' => 'answers-action'])
                         ->slideOver()
                         ->modalHeading('Question Answers')
                         ->modalWidth('4xl')
@@ -568,7 +568,7 @@ class QuestionsRelationManager extends RelationManager
                                 ->columnSpanFull(),
                             RepeatableEntry::make('answers')
                                 ->label('📝 Answers')
-                                ->extraAttributes(['class' => 'text-emerald-600 font-semibold'])
+                                ->extraAttributes(['class' => 'answers-entry'])
                                 ->schema([
                                     TextEntry::make('answer_text')
                                         ->label('Answer')
