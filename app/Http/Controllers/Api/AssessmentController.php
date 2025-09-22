@@ -98,7 +98,6 @@ class AssessmentController extends Controller
 
         // Get sections with their questions for this assessment
         $sections = $assessment->getSectionsWithQuestions();
-        $sections->load(['questions.media', 'questions.answers']);
         $assessment->setRelation('sections', $sections);
 
         return response()->json([

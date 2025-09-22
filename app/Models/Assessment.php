@@ -90,8 +90,8 @@ class Assessment extends Model
      */
     public function getSectionsWithQuestions()
     {
-        // Get all questions for this assessment with their sections
-        $questions = $this->questions()->with('section')->get();
+        // Get all questions for this assessment with their media and answers
+        $questions = $this->questions()->with(['section', 'media', 'answers'])->get();
         
         // Group questions by section
         $sectionsWithQuestions = $questions->groupBy('section_id');
