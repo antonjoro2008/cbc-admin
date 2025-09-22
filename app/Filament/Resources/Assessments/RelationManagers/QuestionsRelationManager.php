@@ -14,6 +14,7 @@ use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Components\Grid;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
@@ -32,7 +33,7 @@ class QuestionsRelationManager extends RelationManager
     {
         return $table
             ->modifyQueryUsing(function ($query) {
-                $query->with('answers');
+                $query->with(['answers', 'media']);
             })
             ->columns([
                 TextColumn::make('question_number')
@@ -140,6 +141,53 @@ class QuestionsRelationManager extends RelationManager
                             ->reorderable(true)
                             ->collapsible()
                             ->columnSpanFull(),
+                        Repeater::make('media')
+                            ->label('Question Media')
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        Select::make('media_type')
+                                            ->label('Media Type')
+                                            ->options([
+                                                'image' => 'Image',
+                                                'video' => 'Video',
+                                                'audio' => 'Audio',
+                                                'pdf' => 'PDF Document',
+                                                'doc' => 'Word Document',
+                                            ])
+                                            ->required()
+                                            ->live(),
+                                        FileUpload::make('file_path')
+                                            ->label('File')
+                                            ->disk('public')
+                                            ->directory('question-media')
+                                            ->acceptedFileTypes(function ($get) {
+                                                $mediaType = $get('media_type');
+                                                return match($mediaType) {
+                                                    'image' => ['image/*'],
+                                                    'video' => ['video/*'],
+                                                    'audio' => ['audio/*'],
+                                                    'pdf' => ['application/pdf'],
+                                                    'doc' => ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+                                                    default => ['*']
+                                                };
+                                            })
+                                            ->required()
+                                            ->live(),
+                                    ]),
+                                Textarea::make('caption')
+                                    ->label('Caption')
+                                    ->rows(2)
+                                    ->placeholder('Enter caption for this media...')
+                                    ->columnSpanFull(),
+                            ])
+                            ->defaultItems(0)
+                            ->minItems(0)
+                            ->maxItems(5)
+                            ->addActionLabel('Add Media')
+                            ->reorderable(true)
+                            ->collapsible()
+                            ->columnSpanFull(),
                     ])
                     ->mutateFormDataUsing(function (array $data, RelationManager $livewire): array {
                         // Automatically set the assessment_id
@@ -157,6 +205,19 @@ class QuestionsRelationManager extends RelationManager
                                 ]);
                             }
                         }
+                        
+                        // Create media for the question
+                        if (isset($data['media']) && is_array($data['media'])) {
+                            foreach ($data['media'] as $mediaData) {
+                                if (!empty($mediaData['file_path'])) {
+                                    $record->media()->create([
+                                        'media_type' => $mediaData['media_type'],
+                                        'file_path' => $mediaData['file_path'],
+                                        'caption' => $mediaData['caption'] ?? null,
+                                    ]);
+                                }
+                            }
+                        }
                     }),
             ])
             ->actions([
@@ -164,8 +225,8 @@ class QuestionsRelationManager extends RelationManager
                     ->modalHeading('Edit Question')
                     ->modalWidth('4xl')
                     ->fillForm(function ($record): array {
-                        // Load the question with its answers
-                        $question = $record->load('answers');
+                        // Load the question with its answers and media
+                        $question = $record->load(['answers', 'media']);
                         
                         // Map the answers to the repeater format
                         $answers = $question->answers->map(function ($answer) {
@@ -173,6 +234,15 @@ class QuestionsRelationManager extends RelationManager
                                 'answer_text' => $answer->answer_text,
                                 'is_correct' => $answer->is_correct,
                                 'explanation' => $answer->explanation,
+                            ];
+                        })->toArray();
+                        
+                        // Map the media to the repeater format
+                        $media = $question->media->map(function ($mediaItem) {
+                            return [
+                                'media_type' => $mediaItem->media_type,
+                                'file_path' => $mediaItem->file_path,
+                                'caption' => $mediaItem->caption,
                             ];
                         })->toArray();
                         
@@ -184,6 +254,7 @@ class QuestionsRelationManager extends RelationManager
                             'parent_question_id' => $question->parent_question_id,
                             'question_text' => $question->question_text,
                             'answers' => $answers,
+                            'media' => $media,
                         ];
                     })
                     ->form([
@@ -259,6 +330,53 @@ class QuestionsRelationManager extends RelationManager
                             ->reorderable(true)
                             ->collapsible()
                             ->columnSpanFull(),
+                        Repeater::make('media')
+                            ->label('Question Media')
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        Select::make('media_type')
+                                            ->label('Media Type')
+                                            ->options([
+                                                'image' => 'Image',
+                                                'video' => 'Video',
+                                                'audio' => 'Audio',
+                                                'pdf' => 'PDF Document',
+                                                'doc' => 'Word Document',
+                                            ])
+                                            ->required()
+                                            ->live(),
+                                        FileUpload::make('file_path')
+                                            ->label('File')
+                                            ->disk('public')
+                                            ->directory('question-media')
+                                            ->acceptedFileTypes(function ($get) {
+                                                $mediaType = $get('media_type');
+                                                return match($mediaType) {
+                                                    'image' => ['image/*'],
+                                                    'video' => ['video/*'],
+                                                    'audio' => ['audio/*'],
+                                                    'pdf' => ['application/pdf'],
+                                                    'doc' => ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+                                                    default => ['*']
+                                                };
+                                            })
+                                            ->required()
+                                            ->live(),
+                                    ]),
+                                Textarea::make('caption')
+                                    ->label('Caption')
+                                    ->rows(2)
+                                    ->placeholder('Enter caption for this media...')
+                                    ->columnSpanFull(),
+                            ])
+                            ->defaultItems(0)
+                            ->minItems(0)
+                            ->maxItems(5)
+                            ->addActionLabel('Add Media')
+                            ->reorderable(true)
+                            ->collapsible()
+                            ->columnSpanFull(),
                     ])
                     ->after(function (array $data, $record): void {
                         // Update answers for the question
@@ -273,6 +391,23 @@ class QuestionsRelationManager extends RelationManager
                                     'is_correct' => $answerData['is_correct'] ?? false,
                                     'explanation' => $answerData['explanation'] ?? null,
                                 ]);
+                            }
+                        }
+                        
+                        // Update media for the question
+                        if (isset($data['media']) && is_array($data['media'])) {
+                            // Delete existing media
+                            $record->media()->delete();
+                            
+                            // Create new media
+                            foreach ($data['media'] as $mediaData) {
+                                if (!empty($mediaData['file_path'])) {
+                                    $record->media()->create([
+                                        'media_type' => $mediaData['media_type'],
+                                        'file_path' => $mediaData['file_path'],
+                                        'caption' => $mediaData['caption'] ?? null,
+                                    ]);
+                                }
                             }
                         }
                     }),
