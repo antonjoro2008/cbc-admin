@@ -124,7 +124,8 @@ class QuestionsRelationManager extends RelationManager
                             ->placeholder('Enter the question text...')
                             ->columnSpanFull(),
                         Repeater::make('answers')
-                            ->label('<span style="color: #059669; font-weight: 600;">📝 Answers</span>')
+                            ->label('📝 Answers')
+                            ->extraAttributes(['class' => 'text-emerald-600 font-semibold'])
                             ->schema([
                                 Grid::make(2)
                                     ->schema([
@@ -189,7 +190,8 @@ class QuestionsRelationManager extends RelationManager
                             ->itemLabel(fn (array $state): ?string => $state['answer_text'] ?? 'Answer')
                             ->columnSpanFull(),
                         Repeater::make('media')
-                            ->label('<span style="color: #dc2626; font-weight: 600;">🎬 Question Media</span>')
+                            ->label('🎬 Question Media')
+                            ->extraAttributes(['class' => 'text-red-600 font-semibold'])
                             ->schema([
                                 Grid::make(2)
                                     ->schema([
@@ -365,7 +367,8 @@ class QuestionsRelationManager extends RelationManager
                                 ->placeholder('Enter the question text...')
                                 ->columnSpanFull(),
                             Repeater::make('answers')
-                                ->label('<span style="color: #059669; font-weight: 600;">📝 Answers</span>')
+                                ->label('📝 Answers')
+                                ->extraAttributes(['class' => 'text-emerald-600 font-semibold'])
                                 ->schema([
                                     Grid::make(2)
                                         ->schema([
@@ -430,7 +433,8 @@ class QuestionsRelationManager extends RelationManager
                                 ->itemLabel(fn (array $state): ?string => $state['answer_text'] ?? 'Answer')
                                 ->columnSpanFull(),
                             Repeater::make('media')
-                                ->label('<span style="color: #dc2626; font-weight: 600;">🎬 Question Media</span>')
+                                ->label('🎬 Question Media')
+                                ->extraAttributes(['class' => 'text-red-600 font-semibold'])
                                 ->schema([
                                     Grid::make(2)
                                         ->schema([
@@ -514,7 +518,8 @@ class QuestionsRelationManager extends RelationManager
                     
                     // Media Action - Shows question media in slideOver
                     Action::make('view_media')
-                        ->label('<span style="color: #dc2626; font-weight: 600;">🎬 Media</span>')
+                        ->label('🎬 Media')
+                        ->extraAttributes(['class' => 'text-red-600 font-semibold'])
                         ->slideOver()
                         ->modalHeading('Question Media')
                         ->modalWidth('4xl')
@@ -551,7 +556,8 @@ class QuestionsRelationManager extends RelationManager
                     
                     // Answers Action - Shows question answers in slideOver
                     Action::make('view_answers')
-                        ->label('<span style="color: #059669; font-weight: 600;">📝 Answers</span>')
+                        ->label('📝 Answers')
+                        ->extraAttributes(['class' => 'text-emerald-600 font-semibold'])
                         ->slideOver()
                         ->modalHeading('Question Answers')
                         ->modalWidth('4xl')
@@ -561,7 +567,8 @@ class QuestionsRelationManager extends RelationManager
                                 ->html()
                                 ->columnSpanFull(),
                             RepeatableEntry::make('answers')
-                                ->label('<span style="color: #059669; font-weight: 600;">📝 Answers</span>')
+                                ->label('📝 Answers')
+                                ->extraAttributes(['class' => 'text-emerald-600 font-semibold'])
                                 ->schema([
                                     TextEntry::make('answer_text')
                                         ->label('Answer')
