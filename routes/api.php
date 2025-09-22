@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\ParentLearnerController;
 use App\Http\Controllers\Api\InstitutionStudentController;
+use App\Http\Controllers\SmsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -105,5 +106,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->group(function () {
         Route::get('/admin/users', [UserController::class, 'adminUsers']);
         Route::get('/admin/institutions', [UserController::class, 'adminInstitutions']);
+    });
+    
+    // SMS routes
+    Route::prefix('sms')->group(function () {
+        Route::post('/test', [SmsController::class, 'sendTestSms']);
+        Route::post('/send', [SmsController::class, 'sendSmsToUser']);
+        Route::post('/bulk', [SmsController::class, 'sendBulkSms']);
+        Route::get('/test-config', [SmsController::class, 'testConfig']);
     });
 });

@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Models\Institution;
 use App\Models\Wallet;
 use App\Models\PasswordResetCode;
+use App\Services\SmsNotificationService;
+use App\Services\EmailNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -86,6 +88,9 @@ class AuthController extends Controller
 
             // Load user with relationships
             $user->load('institution');
+
+            // Send registration SMS
+            SmsNotificationService::sendRegistrationSms($user);
 
             // Prepare user data
             $userData = $user->toArray();
@@ -201,6 +206,9 @@ class AuthController extends Controller
 
             // Load user with relationships
             $user->load('institution');
+
+            // Send registration SMS
+            SmsNotificationService::sendRegistrationSms($user);
 
             // Prepare user data
             $userData = $user->toArray();
@@ -389,17 +397,21 @@ class AuthController extends Controller
             // Create reset code
             $resetCode = PasswordResetCode::createForPhone($request->phone_number, $user->email);
 
-            // TODO: Send email with reset code
-            // For now, we'll just return the code in development
-            // In production, this should be sent via email/SMS
-            $emailSent = $this->sendResetCodeEmail($user->email, $resetCode->code);
+            // Send SMS with reset code
+            SmsNotificationService::sendPasswordResetSms($user, $resetCode->code);
+
+            // Send email with reset code (if user has email)
+            if ($user->email) {
+                EmailNotificationService::sendPasswordResetEmail($user, $resetCode->code);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Password reset code sent successfully',
                 'data' => [
                     'phone_number' => $request->phone_number,
-                    'email_sent' => $emailSent,
+                    'sms_sent' => true,
+                    'email_sent' => !empty($user->email),
                     // Remove this in production - only for development
                     'reset_code' => app()->environment('local') ? $resetCode->code : null,
                     'expires_in_minutes' => 15
@@ -531,20 +543,6 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Send reset code via email (placeholder for now)
-     */
-    private function sendResetCodeEmail(string $email, string $code): bool
-    {
-        // TODO: Implement actual email sending
-        // For now, just log the code (remove in production)
-        \Log::info("Password reset code for {$email}: {$code}");
-
-        // In production, you would use Laravel Mail here
-        // Mail::to($email)->send(new PasswordResetCodeMail($code));
-
-        return true; // Assume email was sent successfully
-    }
 
     /**
      * Get dashboard data for a user

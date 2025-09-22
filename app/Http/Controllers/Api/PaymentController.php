@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Models\Wallet;
 use App\Models\Payment;
 use App\Models\Setting;
+use App\Models\User;
+use App\Services\SmsNotificationService;
 use Illuminate\Http\Request;
 use App\Models\TokenTransaction;
 use Illuminate\Support\Facades\DB;
@@ -306,6 +308,12 @@ class PaymentController extends Controller
                 'description' => "Payment via {$payment->channel} - {$payment->tokens} tokens, {$minutesToCredit} minutes",
             ]);
             Log::info("Token transaction record created");
+
+            // Send payment success SMS
+            $user = User::find($payment->user_id);
+            if ($user) {
+                SmsNotificationService::sendPaymentSuccessSms($user, $payment->tokens, $payment->amount);
+            }
         } else {
             Log::error("Wallet not found");
         }
