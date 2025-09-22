@@ -10,4 +10,36 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
-/* Custom styling for Questions Relation Manager - temporarily disabled for debugging */
+/* Custom styling for Questions Relation Manager */
+/* Use a more targeted approach that won't interfere with JavaScript */
+
+/* Style for Answers sections */
+.answers-section .fi-fo-field-wrp-label,
+.answers-section .fi-fo-field-wrp-label span {
+    color: #059669 !important;
+    font-weight: 600 !important;
+}
+
+/* Style for Media sections */
+.media-section .fi-fo-field-wrp-label,
+.media-section .fi-fo-field-wrp-label span {
+    color: #dc2626 !important;
+    font-weight: 600 !important;
+}
+
+/* Style for action buttons */
+.answers-action {
+    color: #059669 !important;
+    font-weight: 600 !important;
+}
+
+.media-action {
+    color: #dc2626 !important;
+    font-weight: 600 !important;
+}
+
+/* Style for infolist entries */
+.answers-entry .fi-in-entry-label {
+    color: #059669 !important;
+    font-weight: 600 !important;
+}
