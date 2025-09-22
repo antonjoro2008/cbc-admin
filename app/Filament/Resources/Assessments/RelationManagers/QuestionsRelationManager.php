@@ -155,13 +155,12 @@ class QuestionsRelationManager extends RelationManager
                                                 'pdf' => 'PDF Document',
                                                 'doc' => 'Word Document',
                                             ])
-                                            ->required()
-                                            ->live(),
+                                            ->placeholder('Select media type...'),
                                         FileUpload::make('file_path')
                                             ->label('File')
                                             ->disk('public')
                                             ->directory('question-media')
-                                            ->acceptedFileTypes(['*'])
+                                            ->visibility('public')
                                             ->required(),
                                     ]),
                                 Textarea::make('caption')
@@ -198,7 +197,7 @@ class QuestionsRelationManager extends RelationManager
                         // Create media for the question
                         if (isset($data['media']) && is_array($data['media'])) {
                             foreach ($data['media'] as $mediaData) {
-                                if (!empty($mediaData['file_path'])) {
+                                if (!empty($mediaData['file_path']) && !empty($mediaData['media_type'])) {
                                     $record->media()->create([
                                         'media_type' => $mediaData['media_type'],
                                         'file_path' => $mediaData['file_path'],
@@ -333,13 +332,12 @@ class QuestionsRelationManager extends RelationManager
                                                 'pdf' => 'PDF Document',
                                                 'doc' => 'Word Document',
                                             ])
-                                            ->required()
-                                            ->live(),
+                                            ->placeholder('Select media type...'),
                                         FileUpload::make('file_path')
                                             ->label('File')
                                             ->disk('public')
                                             ->directory('question-media')
-                                            ->acceptedFileTypes(['*'])
+                                            ->visibility('public')
                                             ->required(),
                                     ]),
                                 Textarea::make('caption')
@@ -379,7 +377,7 @@ class QuestionsRelationManager extends RelationManager
                             
                             // Create new media
                             foreach ($data['media'] as $mediaData) {
-                                if (!empty($mediaData['file_path'])) {
+                                if (!empty($mediaData['file_path']) && !empty($mediaData['media_type'])) {
                                     $record->media()->create([
                                         'media_type' => $mediaData['media_type'],
                                         'file_path' => $mediaData['file_path'],
