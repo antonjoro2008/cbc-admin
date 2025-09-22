@@ -10,7 +10,6 @@ use App\Filament\Resources\Assessments\Schemas\AssessmentForm;
 use App\Filament\Resources\Assessments\Schemas\AssessmentInfolist;
 use App\Filament\Resources\Assessments\Tables\AssessmentsTable;
 use App\Filament\Resources\Assessments\RelationManagers\QuestionsRelationManager;
-use App\Filament\Resources\Assessments\RelationManagers\SectionsRelationManager;
 use App\Filament\Resources\Assessments\RelationManagers\AttemptsRelationManager;
 use App\Models\Assessment;
 use BackedEnum;
@@ -47,7 +46,6 @@ class AssessmentResource extends Resource
     {
         return [
             QuestionsRelationManager::class,
-            SectionsRelationManager::class,
             AttemptsRelationManager::class,
         ];
     }

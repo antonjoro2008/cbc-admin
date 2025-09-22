@@ -22,10 +22,6 @@ class AssessmentSectionsTable
                     ->label('Section Title')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('assessment.title')
-                    ->label('Assessment')
-                    ->searchable()
-                    ->sortable(),
                 TextColumn::make('description')
                     ->label('Description')
                     ->searchable()

@@ -69,11 +69,18 @@ class Assessment extends Model
     }
 
     /**
-     * Get the sections for the assessment.
+     * Get the sections for the assessment through questions.
      */
-    public function sections(): HasMany
+    public function sections()
     {
-        return $this->hasMany(AssessmentSection::class);
+        return $this->hasManyThrough(
+            AssessmentSection::class,
+            Question::class,
+            'assessment_id', // Foreign key on questions table
+            'id', // Foreign key on sections table
+            'id', // Local key on assessments table
+            'section_id' // Local key on questions table
+        );
     }
 
     /**

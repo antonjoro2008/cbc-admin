@@ -17,7 +17,6 @@ class AssessmentSection extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'assessment_id',
         'title',
         'description',
         'section_order',
@@ -33,14 +32,6 @@ class AssessmentSection extends Model
         'section_order' => 'integer',
         'total_marks' => 'integer',
     ];
-
-    /**
-     * Get the assessment that the section belongs to.
-     */
-    public function assessment(): BelongsTo
-    {
-        return $this->belongsTo(Assessment::class);
-    }
 
     /**
      * Get the questions for this section.

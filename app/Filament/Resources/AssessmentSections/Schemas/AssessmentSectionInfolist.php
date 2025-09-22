@@ -15,13 +15,9 @@ class AssessmentSectionInfolist
             ->components([
                 Section::make('Section Information')
                     ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                TextEntry::make('assessment.title')
-                                    ->label('Assessment'),
-                                TextEntry::make('title')
-                                    ->label('Section Title'),
-                            ]),
+                        TextEntry::make('title')
+                            ->label('Section Title')
+                            ->columnSpanFull(),
                         Grid::make(2)
                             ->schema([
                                 TextEntry::make('section_order')
@@ -34,14 +30,10 @@ class AssessmentSectionInfolist
                     ]),
                 Section::make('Related Information')
                     ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                TextEntry::make('questions_count')
-                                    ->label('Number of Questions')
-                                    ->state(fn($record) => $record->questions()->count()),
-                                TextEntry::make('assessment.subject.name')
-                                    ->label('Subject'),
-                            ]),
+                        TextEntry::make('questions_count')
+                            ->label('Number of Questions')
+                            ->state(fn($record) => $record->questions()->count())
+                            ->columnSpanFull(),
                     ]),
                 Section::make('Timestamps')
                     ->schema([

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\AssessmentSections\Schemas;
 
-use App\Models\Assessment;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -15,20 +14,11 @@ class AssessmentSectionForm
     {
         return $schema
             ->components([
-                Grid::make(2)
-                    ->columnSpanFull()
-                    ->schema([
-                        Select::make('assessment_id')
-                            ->label('Assessment')
-                            ->options(Assessment::all()->pluck('title', 'id'))
-                            ->searchable()
-                            ->required()
-                            ->relationship('assessment', 'title'),
-                        TextInput::make('title')
-                            ->label('Section Title')
-                            ->required()
-                            ->placeholder('Enter section title...'),
-                    ]),
+                TextInput::make('title')
+                    ->label('Section Title')
+                    ->required()
+                    ->placeholder('Enter section title...')
+                    ->columnSpanFull(),
                 Textarea::make('description')
                     ->label('Description')
                     ->rows(3)
