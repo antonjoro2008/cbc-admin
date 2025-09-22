@@ -544,8 +544,6 @@ class QuestionsRelationManager extends RelationManager
                                         ->placeholder('No caption provided'),
                                 ])
                                 ->columns(3)
-                                ->emptyStateHeading('No media files')
-                                ->emptyStateDescription('This question has no associated media files.')
                                 ->columnSpanFull(),
                         ]),
                     
@@ -601,13 +599,9 @@ class QuestionsRelationManager extends RelationManager
                                                 ->placeholder('No caption provided'),
                                         ])
                                         ->columns(3)
-                                        ->emptyStateHeading('No media files')
-                                        ->emptyStateDescription('This answer has no associated media files.')
                                         ->columnSpanFull(),
                                 ])
                                 ->columns(2)
-                                ->emptyStateHeading('No answers')
-                                ->emptyStateDescription('This question has no answers yet.')
                                 ->columnSpanFull(),
                         ]),
                 ])
