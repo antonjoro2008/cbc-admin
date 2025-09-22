@@ -30,6 +30,7 @@ class AssessmentAttemptsTable
                     ->sortable(),
                 TextColumn::make('assessment.title')
                     ->label('Assessment')
+                    ->wrap()
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('attempt_number')
@@ -39,7 +40,7 @@ class AssessmentAttemptsTable
                     ->label('Score')
                     ->sortable(),
                 TextColumn::make('total_marks')
-                    ->label('Total Marks (Auto-marked)')
+                    ->label('Total Marks (Auto)')
                     ->getStateUsing(function ($record) {
                         // Get total marks for auto-marked questions only
                         $totalMarks = $record->assessment->questions()
