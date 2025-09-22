@@ -516,6 +516,14 @@ class QuestionsRelationManager extends RelationManager
                         ->label('Media')
                         ->modalHeading('Question Media')
                         ->modalWidth('4xl')
+                        ->fillForm(function ($record): array {
+                            // Load only the media relationship for this action
+                            $question = $record->load('media');
+                            return [
+                                'question_text' => $question->question_text,
+                                'media' => $question->media->toArray(),
+                            ];
+                        })
                         ->infolist([
                             TextEntry::make('question_text')
                                 ->label('Question')
@@ -552,6 +560,14 @@ class QuestionsRelationManager extends RelationManager
                         ->label('Answers')
                         ->modalHeading('Question Answers')
                         ->modalWidth('4xl')
+                        ->fillForm(function ($record): array {
+                            // Load only the answers relationship with their media for this action
+                            $question = $record->load('answers.media');
+                            return [
+                                'question_text' => $question->question_text,
+                                'answers' => $question->answers->toArray(),
+                            ];
+                        })
                         ->infolist([
                             TextEntry::make('question_text')
                                 ->label('Question')
