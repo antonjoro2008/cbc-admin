@@ -11,8 +11,6 @@ use App\Filament\Resources\Assessments\Schemas\AssessmentInfolist;
 use App\Filament\Resources\Assessments\Tables\AssessmentsTable;
 use App\Filament\Resources\Assessments\RelationManagers\QuestionsRelationManager;
 use App\Filament\Resources\Assessments\RelationManagers\AttemptsRelationManager;
-use App\Filament\Resources\Assessments\RelationManagers\FeedbacksRelationManager;
-use App\Filament\Resources\Assessments\RelationManagers\FeedbackMediaRelationManager;
 use App\Models\Assessment;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -49,8 +47,6 @@ class AssessmentResource extends Resource
         return [
             QuestionsRelationManager::class,
             AttemptsRelationManager::class,
-            FeedbacksRelationManager::class,
-            FeedbackMediaRelationManager::class,
         ];
     }
 
