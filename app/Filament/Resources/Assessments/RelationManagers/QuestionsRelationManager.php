@@ -73,6 +73,7 @@ class QuestionsRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('Add Question')
+                    ->slideOver()
                     ->modalHeading('Add New Question')
                     ->modalWidth('4xl')
                     ->form([
