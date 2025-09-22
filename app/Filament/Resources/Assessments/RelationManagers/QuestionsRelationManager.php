@@ -272,6 +272,7 @@ class QuestionsRelationManager extends RelationManager
                     EditAction::make()
                         ->modalHeading('Edit Question')
                         ->modalWidth('4xl')
+                        ->slideOver()
                         ->fillForm(function ($record): array {
                             // Load the question with its answers, answer media, and question media
                             $question = $record->load(['answers.media', 'media']);
