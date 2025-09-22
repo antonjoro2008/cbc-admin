@@ -14,6 +14,8 @@ use Filament\Tables\Filters\Filter;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\Grid;
 
 class AttemptsRelationManager extends RelationManager
 {
@@ -85,20 +87,26 @@ class AttemptsRelationManager extends RelationManager
                     ->icon('heroicon-o-clipboard-document-check')
                     ->slideOver()
                     ->modalHeading('Attempt Answers')
-                    ->modalWidth('6xl')
+                    ->modalWidth('4xl')
                     ->infolist([
-                        TextEntry::make('student.name')
-                            ->label('Student'),
-                        TextEntry::make('attempt_number')
-                            ->label('Attempt Number'),
-                        TextEntry::make('score')
-                            ->label('Score'),
-                        TextEntry::make('started_at')
-                            ->label('Started At')
-                            ->dateTime('d/m/Y H:i A'),
-                        TextEntry::make('completed_at')
-                            ->label('Completed At')
-                            ->dateTime('d/m/Y H:i A'),
+                        Section::make('Attempt Details')
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        TextEntry::make('student.name')
+                                            ->label('Student'),
+                                        TextEntry::make('attempt_number')
+                                            ->label('Attempt Number'),
+                                        TextEntry::make('score')
+                                            ->label('Score'),
+                                        TextEntry::make('started_at')
+                                            ->label('Started At')
+                                            ->dateTime('d/m/Y H:i A'),
+                                        TextEntry::make('completed_at')
+                                            ->label('Completed At')
+                                            ->dateTime('d/m/Y H:i A'),
+                                    ]),
+                            ]),
                         RepeatableEntry::make('attemptAnswers')
                             ->label('Answers')
                             ->schema([
