@@ -3,6 +3,17 @@
 ## Overview
 This API provides endpoints for student and institution management, assessments, payments, and user-specific information for the CBC Admin educational platform.
 
+## Phone Number Standardization
+All phone numbers in request payloads are automatically standardized to the `254...` format. The system accepts various input formats and converts them:
+
+- `0700123456` → `254700123456`
+- `700123456` → `254700123456` 
+- `+254700123456` → `254700123456`
+- `254 700 123 456` → `254700123456`
+- `(254) 700-123-456` → `254700123456`
+
+This applies to all endpoints that accept phone numbers including registration, login, and password reset.
+
 ## Base URL
 ```
 http://your-domain.com/api
@@ -41,8 +52,10 @@ POST /api/register
 **Note:** 
 - `user_type` is required and must be either "student" or "parent"
 - `institution_id` and `grade_level` are optional fields. Students can register without being associated with an institution
-- `phone_number` is required and must be a valid M-Pesa number with supported prefix
+- `phone_number` is required and must be a valid M-Pesa number with supported prefix (automatically standardized to 254... format)
 - For parent registration, `institution_id` and `grade_level` are typically not needed
+- Registration automatically logs in the user and returns an access token
+- The response includes `user_type` at the top level for easy frontend access
 
 **Response:**
 ```json
@@ -58,6 +71,7 @@ POST /api/register
             "user_type": "student",
             "institution": {...}
         },
+        "user_type": "student",
         "access_token": "1|abc123...",
         "token_type": "Bearer",
         "dashboard": {
@@ -100,6 +114,48 @@ POST /api/institution/register
 }
 ```
 
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Institution registered successfully",
+    "data": {
+        "institution": {
+            "id": 1,
+            "name": "ABC School",
+            "email": "admin@abcschool.com",
+            "phone": "+254700000000",
+            "address": "123 Main St, Nairobi",
+            "created_at": "2024-01-01T00:00:00.000000Z",
+            "updated_at": "2024-01-01T00:00:00.000000Z"
+        },
+        "user": {
+            "id": 1,
+            "name": "Admin User",
+            "email": "admin@abcschool.com",
+            "user_type": "institution",
+            "institution_id": 1,
+            "institution": {...},
+            "wallet": {...}
+        },
+        "user_type": "institution",
+        "access_token": "1|abc123...",
+        "token_type": "Bearer",
+        "dashboard": {
+            "token_balance": 0,
+            "assessment_stats": {...},
+            "recent_assessments": [...],
+            "recent_attempts": [...]
+        }
+    }
+}
+```
+
+**Note:** 
+- Institution registration automatically logs in the admin user
+- The response includes `user_type` at the top level for easy frontend access
+- The institution admin user is created with `user_type: "institution"`
+- A wallet is automatically created for the institution admin
 
 #### 3. Login
 ```http
@@ -115,8 +171,10 @@ POST /api/login
 ```
 
 **Note:** The `login_identifier` can be either:
-- Phone number (for individual users and parents)
+- Phone number (for individual users and parents) - automatically standardized to 254... format
 - Admission number (for institution students)
+
+The response includes `user_type` at the top level for easy frontend access to determine user permissions and UI flow. For institution admin users, institution details are also included at the top level for easy access.
 
 **Response:**
 ```json
@@ -132,6 +190,7 @@ POST /api/login
             "institution": {...},
             "wallet": {...}
         },
+        "user_type": "student",
         "access_token": "1|abc123...",
         "token_type": "Bearer",
         "dashboard": {
@@ -151,6 +210,50 @@ POST /api/login
 }
 ```
 
+**Institution Admin Login Response:**
+```json
+{
+    "success": true,
+    "message": "Login successful",
+    "data": {
+        "user": {
+            "id": 1,
+            "name": "Admin User",
+            "email": "admin@abcschool.com",
+            "user_type": "institution",
+            "institution_id": 1,
+            "institution": {
+                "id": 1,
+                "name": "ABC High School",
+                "email": "admin@abcschool.com",
+                "phone": "+254700000000",
+                "address": "123 Main St, Nairobi",
+                "motto": null,
+                "theme_color": null
+            },
+            "wallet": {...}
+        },
+        "user_type": "institution",
+        "institution": {
+            "id": 1,
+            "name": "ABC High School",
+            "email": "admin@abcschool.com",
+            "phone": "+254700000000",
+            "address": "123 Main St, Nairobi",
+            "motto": null,
+            "theme_color": null
+        },
+        "access_token": "1|abc123...",
+        "token_type": "Bearer",
+        "dashboard": {
+            "token_balance": 150,
+            "assessment_stats": {...},
+            "recent_assessments": [...],
+            "recent_attempts": [...]
+        }
+    }
+}
+```
 
 #### 4. Logout
 ```http
@@ -163,6 +266,41 @@ POST /api/logout
 POST /api/refresh
 ```
 *Requires authentication*
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Token refreshed successfully",
+    "data": {
+        "access_token": "1|abc123...",
+        "token_type": "Bearer",
+        "user_type": "student"
+    }
+}
+```
+
+**Institution Admin Refresh Response:**
+```json
+{
+    "success": true,
+    "message": "Token refreshed successfully",
+    "data": {
+        "access_token": "1|abc123...",
+        "token_type": "Bearer",
+        "user_type": "institution",
+        "institution": {
+            "id": 1,
+            "name": "ABC High School",
+            "email": "admin@abcschool.com",
+            "phone": "+254700000000",
+            "address": "123 Main St, Nairobi",
+            "motto": null,
+            "theme_color": null
+        }
+    }
+}
+```
 
 ### User Management
 

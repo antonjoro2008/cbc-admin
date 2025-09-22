@@ -23,12 +23,18 @@ class DashboardController extends Controller
         
         $data = [
             'user' => $user->load('institution', 'wallet'),
+            'user_type' => $user->user_type, // Explicitly include user type for frontend
             'token_balance' => $effectiveWallet->balance ?? 0,
             'minutes_balance' => $effectiveWallet->available_minutes ?? 0,
             'assessment_stats' => $this->getAssessmentStats($user),
             'recent_assessments' => $this->getRecentAssessments($user),
             'recent_attempts' => $this->getRecentAttempts($user),
         ];
+
+        // Include institution details at top level for institution admin users
+        if ($user->user_type === 'institution' && $user->institution) {
+            $data['institution'] = $user->institution;
+        }
 
         return response()->json([
             'success' => true,
@@ -48,6 +54,7 @@ class DashboardController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
+                'user_type' => $user->user_type, // Include user type for frontend
                 'token_balance' => $effectiveWallet->balance ?? 0,
                 'minutes_balance' => $effectiveWallet->available_minutes ?? 0,
                 'wallet_id' => $effectiveWallet->id ?? null,

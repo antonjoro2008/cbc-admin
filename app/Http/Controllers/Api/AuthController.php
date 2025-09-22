@@ -19,6 +19,9 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
+        // Standardize phone number before validation
+        $request->merge(['phone_number' => $this->standardizePhoneNumber($request->phone_number)]);
+        
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'phone_number' => [
@@ -94,6 +97,7 @@ class AuthController extends Controller
                 'message' => "$userTypeLabel registered successfully",
                 'data' => [
                     'user' => $userData,
+                    'user_type' => $user->user_type, // Explicitly include user type for frontend
                     'access_token' => $token,
                     'token_type' => 'Bearer',
                     'dashboard' => $dashboardData
@@ -114,6 +118,11 @@ class AuthController extends Controller
      */
     public function registerInstitution(Request $request)
     {
+        // Standardize phone numbers before validation
+        $request->merge([
+            'admin_phone_number' => $this->standardizePhoneNumber($request->admin_phone_number)
+        ]);
+        
         $validator = Validator::make($request->all(), [
             'institution_name' => 'required|string|max:255',
             'institution_email' => 'nullable|string|email|max:255|unique:institutions,email',
@@ -201,7 +210,8 @@ class AuthController extends Controller
                 'message' => 'Institution registered successfully',
                 'data' => [
                     'institution' => $institution,
-                    'admin_user' => $userData,
+                    'user' => $userData,
+                    'user_type' => $user->user_type, // Explicitly include user type for frontend
                     'access_token' => $token,
                     'token_type' => 'Bearer',
                     'dashboard' => $dashboardData
@@ -222,6 +232,14 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
+        // Standardize login_identifier if it looks like a phone number
+        $loginIdentifier = $request->login_identifier;
+        if (preg_match('/^[0-9+\-\s()]+$/', $loginIdentifier)) {
+            // It looks like a phone number, standardize it
+            $loginIdentifier = $this->standardizePhoneNumber($loginIdentifier);
+            $request->merge(['login_identifier' => $loginIdentifier]);
+        }
+        
         $validator = Validator::make($request->all(), [
             'login_identifier' => 'required|string',
             'password' => 'required|string',
@@ -271,15 +289,23 @@ class AuthController extends Controller
         // Prepare user data
         $userData = $user->toArray();
 
+        $responseData = [
+            'user' => $userData,
+            'user_type' => $user->user_type, // Explicitly include user type for frontend
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'dashboard' => $dashboardData
+        ];
+
+        // Include institution details at top level for institution admin users
+        if ($user->user_type === 'institution' && $user->institution) {
+            $responseData['institution'] = $user->institution;
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
-            'data' => [
-                'user' => $userData,
-                'access_token' => $token,
-                'token_type' => 'Bearer',
-                'dashboard' => $dashboardData
-            ]
+            'data' => $responseData
         ]);
     }
 
@@ -309,13 +335,21 @@ class AuthController extends Controller
         // Create new token
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        $responseData = [
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user_type' => $user->user_type, // Include user type for frontend
+        ];
+
+        // Include institution details at top level for institution admin users
+        if ($user->user_type === 'institution' && $user->institution) {
+            $responseData['institution'] = $user->institution;
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Token refreshed successfully',
-            'data' => [
-                'access_token' => $token,
-                'token_type' => 'Bearer',
-            ]
+            'data' => $responseData
         ]);
     }
 
@@ -324,6 +358,9 @@ class AuthController extends Controller
      */
     public function forgotPassword(Request $request)
     {
+        // Standardize phone number before validation
+        $request->merge(['phone_number' => $this->standardizePhoneNumber($request->phone_number)]);
+        
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|string|regex:/^254[0-9]{9}$/',
         ], [
@@ -426,6 +463,9 @@ class AuthController extends Controller
      */
     public function resetPassword(Request $request)
     {
+        // Standardize phone number before validation
+        $request->merge(['phone_number' => $this->standardizePhoneNumber($request->phone_number)]);
+        
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|string|regex:/^254[0-9]{9}$/',
             'code' => 'required|string|size:6',
@@ -643,6 +683,30 @@ class AuthController extends Controller
         }
 
         return 0;
+    }
+
+    /**
+     * Standardize phone number to 254... format
+     */
+    protected function standardizePhoneNumber(string $phoneNumber): string
+    {
+        // Remove all non-numeric characters
+        $phoneNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
+        
+        // Handle different formats
+        if (str_starts_with($phoneNumber, '254')) {
+            // Already in 254 format
+            return $phoneNumber;
+        } elseif (str_starts_with($phoneNumber, '0')) {
+            // Convert from 07... format to 2547...
+            return '254' . substr($phoneNumber, 1);
+        } elseif (str_starts_with($phoneNumber, '7')) {
+            // Convert from 7... format to 2547...
+            return '254' . $phoneNumber;
+        }
+        
+        // If none of the above, assume it's already in the correct format
+        return $phoneNumber;
     }
 
     /**
