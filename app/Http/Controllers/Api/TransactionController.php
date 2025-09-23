@@ -48,16 +48,28 @@ class TransactionController extends Controller
             ], 403);
         }
 
-        // Get all students from this institution
+        // Get all users associated with this institution
+        // This includes: institution admin, students, and parents of students at this institution
+        $institutionUserIds = collect();
+        
+        // 1. Add the institution admin (the user making this request)
+        $institutionUserIds->push($user->id);
+        
+        // 2. Add all students from this institution
         $institutionStudents = User::where('institution_id', $user->institution_id)
             ->where('user_type', 'student')
             ->pluck('id');
+        $institutionUserIds = $institutionUserIds->merge($institutionStudents);
+        
+        // 3. Add parents who have learners at this institution
+        // (Note: This would require a relationship between ParentLearner and institution students)
+        // For now, we'll focus on institution admin and students
 
         // Get summary data for institution
-        $summary = $this->getInstitutionTransactionSummary($institutionStudents);
+        $summary = $this->getInstitutionTransactionSummary($institutionUserIds);
 
         // Get transactions for institution
-        $transactions = $this->getInstitutionTransactions($institutionStudents, $request);
+        $transactions = $this->getInstitutionTransactions($institutionUserIds, $request);
 
         return response()->json([
             'success' => true,
@@ -116,34 +128,37 @@ class TransactionController extends Controller
     /**
      * Get institution transaction summary
      */
-    private function getInstitutionTransactionSummary($studentIds)
+    private function getInstitutionTransactionSummary($userIds)
     {
         $currentMonth = now()->startOfMonth();
         
-        // Total spent by all students
-        $totalSpent = Payment::whereIn('user_id', $studentIds)
+        // Total spent by all users (institution admin + students)
+        $totalSpent = Payment::whereIn('user_id', $userIds)
             ->where('status', 'successful')
             ->sum('amount');
 
-        // Total purchases by all students
-        $totalPurchases = Payment::whereIn('user_id', $studentIds)
+        // Total purchases by all users
+        $totalPurchases = Payment::whereIn('user_id', $userIds)
             ->where('status', 'successful')
             ->count();
 
         // This month purchase amount
-        $thisMonthSpent = Payment::whereIn('user_id', $studentIds)
+        $thisMonthSpent = Payment::whereIn('user_id', $userIds)
             ->where('status', 'successful')
             ->where('created_at', '>=', $currentMonth)
             ->sum('amount');
 
-        // Total tokens credited to all students
-        $totalTokensCredited = TokenTransaction::whereHas('wallet', function ($q) use ($studentIds) {
-            $q->whereIn('user_id', $studentIds);
+        // Total tokens credited to all users
+        $totalTokensCredited = TokenTransaction::whereHas('wallet', function ($q) use ($userIds) {
+            $q->whereIn('user_id', $userIds);
         })
         ->where('transaction_type', 'credit')
         ->sum('tokens');
 
-        // Total tokens used by all students
+        // Total tokens used by all students (only students make attempts)
+        $studentIds = $userIds->filter(function ($userId) {
+            return User::find($userId)->isStudent();
+        });
         $totalTokensUsed = TokenUsage::whereHas('attempt.student', function ($q) use ($studentIds) {
             $q->whereIn('id', $studentIds);
         })->sum('tokens_used');
@@ -236,13 +251,13 @@ class TransactionController extends Controller
     /**
      * Get institution transactions
      */
-    private function getInstitutionTransactions($studentIds, $request)
+    private function getInstitutionTransactions($userIds, $request)
     {
         $perPage = $request->get('per_page', 20);
         $page = $request->get('page', 1);
 
-        // Get payments from all students
-        $payments = Payment::whereIn('user_id', $studentIds)
+        // Get payments from all users (institution admin + students)
+        $payments = Payment::whereIn('user_id', $userIds)
             ->where('status', 'successful')
             ->with(['user', 'mpesaPayment', 'bankPayment'])
             ->get()
@@ -265,6 +280,9 @@ class TransactionController extends Controller
             });
 
         // Get token usages from all students - group by attempt to avoid duplicates
+        $studentIds = $userIds->filter(function ($userId) {
+            return User::find($userId)->isStudent();
+        });
         $tokenUsages = TokenUsage::whereHas('attempt.student', function ($q) use ($studentIds) {
             $q->whereIn('id', $studentIds);
         })
