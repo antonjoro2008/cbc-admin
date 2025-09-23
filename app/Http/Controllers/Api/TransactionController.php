@@ -187,27 +187,30 @@ class TransactionController extends Controller
                 ];
             });
 
-        // Get token usages (debits)
+        // Get token usages (debits) - group by attempt to avoid duplicates
         $tokenUsages = TokenUsage::whereHas('attempt.student', function ($q) use ($user) {
             $q->where('id', $user->id);
         })
         ->with(['attempt.assessment'])
         ->get()
-        ->map(function ($usage) {
+        ->groupBy('attempt_id')
+        ->map(function ($usages) {
+            $attempt = $usages->first()->attempt;
+            $totalTokensUsed = $usages->sum('tokens_used');
+            
             return [
-                'id' => 'usage_' . $usage->id,
+                'id' => 'attempt_' . $attempt->id,
                 'type' => 'debit',
                 'transaction_type' => 'Assessment Attempt',
-                'date' => $usage->attempt->started_at->format('Y-m-d H:i:s'),
+                'date' => $attempt->started_at->format('Y-m-d H:i:s'),
                 'amount' => null,
-                'tokens' => -$usage->tokens_used,
-                'status' => $usage->attempt->isCompleted() ? 'completed' : 'in_progress',
-                'assessment_title' => $usage->attempt->assessment->title,
-                'assessment_grade' => $usage->attempt->assessment->grade_level,
-                'assessment_subject' => $usage->attempt->assessment->subject->name ?? 'N/A',
-                'score' => $usage->attempt->score,
-                'description' => "Assessment attempt: {$usage->attempt->assessment->title}",
-                'attempt_id' => $usage->attempt->id
+                'tokens' => -$totalTokensUsed,
+                'status' => $attempt->isCompleted() ? 'completed' : 'in_progress',
+                'assessment_title' => $attempt->assessment->title,
+                'assessment_grade' => $attempt->assessment->grade_level,
+                'assessment_subject' => $attempt->assessment->subject->name ?? 'N/A',
+                'description' => "Assessment attempt: {$attempt->assessment->title}",
+                'attempt_id' => $attempt->id
             ];
         });
 
@@ -261,29 +264,32 @@ class TransactionController extends Controller
                 ];
             });
 
-        // Get token usages from all students
+        // Get token usages from all students - group by attempt to avoid duplicates
         $tokenUsages = TokenUsage::whereHas('attempt.student', function ($q) use ($studentIds) {
             $q->whereIn('id', $studentIds);
         })
         ->with(['attempt.assessment', 'attempt.student'])
         ->get()
-        ->map(function ($usage) {
+        ->groupBy('attempt_id')
+        ->map(function ($usages) {
+            $attempt = $usages->first()->attempt;
+            $totalTokensUsed = $usages->sum('tokens_used');
+            
             return [
-                'id' => 'usage_' . $usage->id,
+                'id' => 'attempt_' . $attempt->id,
                 'type' => 'debit',
                 'transaction_type' => 'Assessment Attempt',
-                'date' => $usage->attempt->started_at->format('Y-m-d H:i:s'),
+                'date' => $attempt->started_at->format('Y-m-d H:i:s'),
                 'amount' => null,
-                'tokens' => -$usage->tokens_used,
-                'status' => $usage->attempt->isCompleted() ? 'completed' : 'in_progress',
-                'assessment_title' => $usage->attempt->assessment->title,
-                'assessment_grade' => $usage->attempt->assessment->grade_level,
-                'assessment_subject' => $usage->attempt->assessment->subject->name ?? 'N/A',
-                'score' => $usage->attempt->score,
-                'description' => "Assessment attempt: {$usage->attempt->assessment->title}",
-                'attempt_id' => $usage->attempt->id,
-                'student_name' => $usage->attempt->student->name,
-                'student_id' => $usage->attempt->student->id
+                'tokens' => -$totalTokensUsed,
+                'status' => $attempt->isCompleted() ? 'completed' : 'in_progress',
+                'assessment_title' => $attempt->assessment->title,
+                'assessment_grade' => $attempt->assessment->grade_level,
+                'assessment_subject' => $attempt->assessment->subject->name ?? 'N/A',
+                'description' => "Assessment attempt: {$attempt->assessment->title}",
+                'attempt_id' => $attempt->id,
+                'student_name' => $attempt->student->name,
+                'student_id' => $attempt->student->id
             ];
         });
 
