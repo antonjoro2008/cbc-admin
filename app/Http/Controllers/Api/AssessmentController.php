@@ -291,10 +291,10 @@ class AssessmentController extends Controller
         $user = $request->user();
 
         // Check if user is a student
-        if (!$user->isStudent()) {
+        if (!$user->isStudent() && !$user->isParent()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Only students can start assessments'
+                'message' => 'Only students or parents accounts can start assessments'
             ], 403);
         }
 
@@ -308,7 +308,7 @@ class AssessmentController extends Controller
 
         // Get maximum number of attempts allowed
         $maxAttempts = Setting::getValue('max_number_of_assessment_attempts', 3);
-        
+
         // Check existing attempts for this student and assessment
         $existingAttempts = AssessmentAttempt::where('assessment_id', $assessment->id)
             ->where('student_id', $user->id)
@@ -354,7 +354,7 @@ class AssessmentController extends Controller
 
             // Get minutes per token setting
             $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
-            
+
             // Get user's effective wallet (institution admin's wallet for institution students)
             $wallet = $user->getEffectiveWallet();
             if (!$wallet) {
@@ -431,7 +431,7 @@ class AssessmentController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to start assessment',
@@ -521,14 +521,14 @@ class AssessmentController extends Controller
 
                 // Check if question can be auto-marked
                 $canAutoMark = in_array($questionType, ['mcq', 'true_false', 'matching', 'fill_blank']);
-                
+
                 if ($canAutoMark) {
                     $autoMarkedQuestions++;
                     $totalMarksForAutoMarked += $questionMarks;
                     $isCorrect = $this->markAnswer($question, $questionType, $answer);
                     $marksForQuestion = $isCorrect ? $questionMarks : 0;
                     $marksAwarded += $marksForQuestion;
-                    
+
                     if ($isCorrect) {
                         $correctAnswers++;
                     }
@@ -551,7 +551,7 @@ class AssessmentController extends Controller
                 // Generate feedback for auto-marked questions
                 if ($canAutoMark) {
                     $feedback = $this->generateFeedback($question, $questionType, $answer, $isCorrect);
-                    
+
                     // Save feedback
                     $feedbackRecord = Feedback::create([
                         'attempt_answer_id' => $attemptAnswer->id,
@@ -612,7 +612,7 @@ class AssessmentController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Assessment submission failed',
@@ -641,7 +641,7 @@ class AssessmentController extends Controller
                 // For matching questions, compare the matches
                 $studentMatches = $answer['matches'] ?? [];
                 $correctAnswers = $question->answers()->where('is_correct', true)->get();
-                
+
                 if (count($studentMatches) !== $correctAnswers->count()) {
                     return false;
                 }
@@ -657,7 +657,7 @@ class AssessmentController extends Controller
             case 'fill_blank':
                 $studentBlanks = $answer['blanks'] ?? [];
                 $correctAnswers = $question->answers()->where('is_correct', true)->get();
-                
+
                 if (count($studentBlanks) !== $correctAnswers->count()) {
                     return false;
                 }
@@ -712,7 +712,7 @@ class AssessmentController extends Controller
 
         // Get all answers for this question
         $allAnswers = $question->answers()->orderBy('id')->get();
-        
+
         // Generate explanations for all possible answers
         $allExplanations = '';
         foreach ($allAnswers as $answerOption) {
@@ -721,7 +721,7 @@ class AssessmentController extends Controller
                 $allExplanations .= "<p>{$answerOption->answer_text} - {$answerOption->explanation}</p>";
             }
         }
-        
+
         $feedback['all_explanations'] = $allExplanations;
 
         if ($isCorrect) {
@@ -766,7 +766,7 @@ class AssessmentController extends Controller
         $index = $allAnswers->search(function ($item) use ($answer) {
             return $item->id === $answer->id;
         });
-        
+
         return chr(65 + $index); // A, B, C, D, etc.
     }
 
@@ -817,7 +817,7 @@ class AssessmentController extends Controller
 
             // Get minutes per token setting
             $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
-            
+
             // Calculate tokens to deduct (fraction based on minutes elapsed)
             $tokensToDeduct = $minutesElapsed / $minutesPerToken;
             $minutesToDeduct = $minutesElapsed;
@@ -870,7 +870,7 @@ class AssessmentController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to track progress',
