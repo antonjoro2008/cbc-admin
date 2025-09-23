@@ -689,11 +689,112 @@ GET /api/payments/{id}
 ```
 *Requires authentication*
 
+### Subject Management Endpoints
+
+#### 21. Get All Subjects
+```http
+GET /api/subjects
+```
+*Requires authentication*
+
+Returns a paginated list of all available subjects with optional search and sorting.
+
+**Query Parameters:**
+- `search` (optional): Search by subject name or code
+- `sort_by` (optional): Sort field (default: 'name')
+- `sort_order` (optional): Sort order - 'asc' or 'desc' (default: 'asc')
+- `per_page` (optional): Number of items per page (default: 20)
+- `page` (optional): Page number (default: 1)
+
+**Example Request:**
+```http
+GET /api/subjects?search=math&sort_by=name&sort_order=asc&per_page=10
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "current_page": 1,
+        "data": [
+            {
+                "id": 5,
+                "name": "Mathematics",
+                "code": "903",
+                "created_at": "2024-01-15T10:30:00.000000Z",
+                "updated_at": "2024-01-15T10:30:00.000000Z"
+            },
+            {
+                "id": 1,
+                "name": "Integrated Science",
+                "code": "905",
+                "created_at": "2024-01-15T10:30:00.000000Z",
+                "updated_at": "2024-01-15T10:30:00.000000Z"
+            }
+        ],
+        "first_page_url": "http://localhost:8000/api/subjects?page=1",
+        "from": 1,
+        "last_page": 1,
+        "last_page_url": "http://localhost:8000/api/subjects?page=1",
+        "links": [
+            {
+                "url": null,
+                "label": "&laquo; Previous",
+                "active": false
+            },
+            {
+                "url": "http://localhost:8000/api/subjects?page=1",
+                "label": "1",
+                "active": true
+            },
+            {
+                "url": null,
+                "label": "Next &raquo;",
+                "active": false
+            }
+        ],
+        "next_page_url": null,
+        "path": "http://localhost:8000/api/subjects",
+        "per_page": 20,
+        "prev_page_url": null,
+        "to": 2,
+        "total": 2
+    }
+}
+```
+
+#### 22. Get Subject Details
+```http
+GET /api/subjects/{id}
+```
+*Requires authentication*
+
+Returns detailed information about a specific subject including assessment count.
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 5,
+        "name": "Mathematics",
+        "code": "903",
+        "assessment_count": 15,
+        "created_at": "2024-01-15T10:30:00.000000Z",
+        "updated_at": "2024-01-15T10:30:00.000000Z"
+    }
+}
+```
+
+**Error Responses:**
+- `404`: Subject not found
+
 ### Institution-Specific Endpoints
 
 ### Institution Student Management
 
-#### 20. Get Institution Students
+#### 23. Get Institution Students
 ```http
 GET /api/institution/students
 ```
@@ -733,7 +834,7 @@ Returns all students for the authenticated institution with pagination and filte
 }
 ```
 
-#### 21. Create Single Student
+#### 24. Create Single Student
 ```http
 POST /api/institution/students
 ```
@@ -770,7 +871,7 @@ POST /api/institution/students
 }
 ```
 
-#### 22. Create Multiple Students
+#### 25. Create Multiple Students
 ```http
 POST /api/institution/students/multiple
 ```
@@ -830,7 +931,7 @@ POST /api/institution/students/multiple
 }
 ```
 
-#### 23. Import Students from Excel
+#### 26. Import Students from Excel
 ```http
 POST /api/institution/students/import
 ```
@@ -860,7 +961,7 @@ POST /api/institution/students/import
 }
 ```
 
-#### 24. Get Specific Student
+#### 27. Get Specific Student
 ```http
 GET /api/institution/students/{id}
 ```
@@ -884,7 +985,7 @@ GET /api/institution/students/{id}
 }
 ```
 
-#### 25. Update Student
+#### 28. Update Student
 ```http
 PUT /api/institution/students/{id}
 ```
@@ -919,7 +1020,7 @@ PUT /api/institution/students/{id}
 }
 ```
 
-#### 26. Delete Student
+#### 29. Delete Student
 ```http
 DELETE /api/institution/students/{id}
 ```
@@ -937,7 +1038,7 @@ DELETE /api/institution/students/{id}
 
 ### Parent Learners Management
 
-#### 27. Get Parent Learners
+#### 30. Get Parent Learners
 ```http
 GET /api/parent/learners
 ```
@@ -970,7 +1071,7 @@ Returns all learners for the authenticated parent.
 }
 ```
 
-#### 28. Add Single Learner
+#### 31. Add Single Learner
 ```http
 POST /api/parent/learners
 ```
@@ -1000,7 +1101,7 @@ POST /api/parent/learners
 }
 ```
 
-#### 29. Add Multiple Learners
+#### 32. Add Multiple Learners
 ```http
 POST /api/parent/learners/multiple
 ```
@@ -1060,7 +1161,7 @@ POST /api/parent/learners/multiple
 }
 ```
 
-#### 30. Get Specific Learner
+#### 33. Get Specific Learner
 ```http
 GET /api/parent/learners/{id}
 ```
@@ -1081,7 +1182,7 @@ GET /api/parent/learners/{id}
 }
 ```
 
-#### 31. Update Learner
+#### 34. Update Learner
 ```http
 PUT /api/parent/learners/{id}
 ```
@@ -1111,7 +1212,7 @@ PUT /api/parent/learners/{id}
 }
 ```
 
-#### 32. Delete Learner
+#### 35. Delete Learner
 ```http
 DELETE /api/parent/learners/{id}
 ```
@@ -1127,13 +1228,13 @@ DELETE /api/parent/learners/{id}
 
 ### Admin Endpoints
 
-#### 33. Get All Users (Admin only)
+#### 36. Get All Users (Admin only)
 ```http
 GET /api/admin/users
 ```
 *Requires admin authentication*
 
-#### 34. Get All Institutions (Admin only)
+#### 37. Get All Institutions (Admin only)
 ```http
 GET /api/admin/institutions
 ```
