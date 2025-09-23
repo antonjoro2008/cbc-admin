@@ -8,7 +8,5 @@ use Illuminate\Support\Facades\Route;
 
 // Add a simple login route to prevent "Route [login] not defined" errors
 Route::get('/login', function () {
-    return response()->json([
-        'message' => 'Please use the API login endpoint: POST /api/login'
-    ], 401);
+    return redirect()->route('filament.admin.auth.login');
 })->name('login');
