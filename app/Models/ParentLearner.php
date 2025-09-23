@@ -16,7 +16,7 @@ class ParentLearner extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'parent_id',
+        'user_id',
         'name',
         'grade_level',
     ];
@@ -26,6 +26,6 @@ class ParentLearner extends Model
      */
     public function parent(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'parent_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 }
