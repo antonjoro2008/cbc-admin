@@ -22,7 +22,7 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         // Standardize phone number before validation
-        $request->merge(['phone_number' => $this->standardizePhoneNumber($request->phone_number)]);
+        $request->merge(['mpesa_phone' => $this->standardizePhoneNumber($request->phone_number)]);
         
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -30,7 +30,7 @@ class AuthController extends Controller
                 'required',
                 'string',
                 'max:15',
-                'unique:users',
+                'unique:users,mpesa_phone',
                 function ($attribute, $value, $fail) {
                     if (!$this->isValidMpesaNumber($value)) {
                         $fail('Phone number must be a valid M-Pesa number with supported prefix.');
