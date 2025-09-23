@@ -952,7 +952,7 @@ Returns all learners for the authenticated parent.
     "data": [
         {
             "id": 1,
-            "parent_id": 123,
+            "user_id": 123,
             "name": "John Doe Jr.",
             "grade_level": "Grade 6",
             "created_at": "2024-01-15T10:30:00.000000Z",
@@ -960,7 +960,7 @@ Returns all learners for the authenticated parent.
         },
         {
             "id": 2,
-            "parent_id": 123,
+            "user_id": 123,
             "name": "Jane Doe",
             "grade_level": "Grade 4",
             "created_at": "2024-01-15T11:00:00.000000Z",
@@ -991,7 +991,7 @@ POST /api/parent/learners
     "message": "Learner added successfully",
     "data": {
         "id": 1,
-        "parent_id": 123,
+        "user_id": 123,
         "name": "John Doe Jr.",
         "grade_level": "Grade 6",
         "created_at": "2024-01-15T10:30:00.000000Z",
@@ -1034,7 +1034,7 @@ POST /api/parent/learners/multiple
     "data": [
         {
             "id": 1,
-            "parent_id": 123,
+            "user_id": 123,
             "name": "John Doe Jr.",
             "grade_level": "Grade 6",
             "created_at": "2024-01-15T10:30:00.000000Z",
@@ -1042,7 +1042,7 @@ POST /api/parent/learners/multiple
         },
         {
             "id": 2,
-            "parent_id": 123,
+            "user_id": 123,
             "name": "Jane Doe",
             "grade_level": "Grade 4",
             "created_at": "2024-01-15T10:30:00.000000Z",
@@ -1050,7 +1050,7 @@ POST /api/parent/learners/multiple
         },
         {
             "id": 3,
-            "parent_id": 123,
+            "user_id": 123,
             "name": "Bob Doe",
             "grade_level": "Grade 8",
             "created_at": "2024-01-15T10:30:00.000000Z",
@@ -1072,7 +1072,7 @@ GET /api/parent/learners/{id}
     "success": true,
     "data": {
         "id": 1,
-        "parent_id": 123,
+        "user_id": 123,
         "name": "John Doe Jr.",
         "grade_level": "Grade 6",
         "created_at": "2024-01-15T10:30:00.000000Z",
@@ -1102,7 +1102,7 @@ PUT /api/parent/learners/{id}
     "message": "Learner updated successfully",
     "data": {
         "id": 1,
-        "parent_id": 123,
+        "user_id": 123,
         "name": "John Doe Jr. Updated",
         "grade_level": "Grade 7",
         "created_at": "2024-01-15T10:30:00.000000Z",
