@@ -17,7 +17,7 @@ class ParentLearnerController extends Controller
     public function index(): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user->isParent()) {
             return response()->json([
                 'success' => false,
@@ -39,7 +39,7 @@ class ParentLearnerController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user->isParent()) {
             return response()->json([
                 'success' => false,
@@ -78,7 +78,7 @@ class ParentLearnerController extends Controller
     public function storeMultiple(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user->isParent()) {
             return response()->json([
                 'success' => false,
@@ -121,7 +121,7 @@ class ParentLearnerController extends Controller
     public function update(Request $request, ParentLearner $parentLearner): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user->isParent()) {
             return response()->json([
                 'success' => false,
@@ -130,7 +130,7 @@ class ParentLearnerController extends Controller
         }
 
         // Check if the learner belongs to the authenticated parent
-        if ($parentLearner->parent_id !== $user->id) {
+        if ($parentLearner->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Access denied. You can only update your own learners.'
@@ -168,7 +168,7 @@ class ParentLearnerController extends Controller
     public function destroy(ParentLearner $parentLearner): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user->isParent()) {
             return response()->json([
                 'success' => false,
@@ -177,7 +177,7 @@ class ParentLearnerController extends Controller
         }
 
         // Check if the learner belongs to the authenticated parent
-        if ($parentLearner->parent_id !== $user->id) {
+        if ($parentLearner->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Access denied. You can only delete your own learners.'
@@ -198,7 +198,7 @@ class ParentLearnerController extends Controller
     public function show(ParentLearner $parentLearner): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user->isParent()) {
             return response()->json([
                 'success' => false,
@@ -207,7 +207,7 @@ class ParentLearnerController extends Controller
         }
 
         // Check if the learner belongs to the authenticated parent
-        if ($parentLearner->parent_id !== $user->id) {
+        if ($parentLearner->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Access denied. You can only view your own learners.'
