@@ -83,10 +83,10 @@ class User extends Authenticatable
             $institutionAdmin = User::where('institution_id', $this->institution_id)
                 ->where('user_type', 'institution')
                 ->first();
-            
+
             return $institutionAdmin ? $institutionAdmin->wallet : null;
         }
-        
+
         // For individual users (parents, individual students), return their own wallet
         return $this->wallet;
     }
@@ -160,6 +160,6 @@ class User extends Authenticatable
      */
     public function parentLearners(): HasMany
     {
-        return $this->hasMany(ParentLearner::class, 'parent_id');
+        return $this->hasMany(ParentLearner::class, 'user_id');
     }
 }
