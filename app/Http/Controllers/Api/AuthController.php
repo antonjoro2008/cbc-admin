@@ -22,15 +22,15 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         // Standardize phone number before validation
-        $request->merge(['mpesa_phone' => $this->standardizePhoneNumber($request->phone_number)]);
-        
+        $request->merge(['phone_number' => $this->standardizePhoneNumber($request->phone_number)]);
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'phone_number' => [
                 'required',
                 'string',
                 'max:15',
-                'unique:users,mpesa_phone',
+                'unique:users,phone_number',
                 function ($attribute, $value, $fail) {
                     if (!$this->isValidMpesaNumber($value)) {
                         $fail('Phone number must be a valid M-Pesa number with supported prefix.');
@@ -127,7 +127,7 @@ class AuthController extends Controller
         $request->merge([
             'admin_phone_number' => $this->standardizePhoneNumber($request->admin_phone_number)
         ]);
-        
+
         $validator = Validator::make($request->all(), [
             'institution_name' => 'required|string|max:255',
             'institution_email' => 'nullable|string|email|max:255|unique:institutions,email',
@@ -247,7 +247,7 @@ class AuthController extends Controller
             $loginIdentifier = $this->standardizePhoneNumber($loginIdentifier);
             $request->merge(['login_identifier' => $loginIdentifier]);
         }
-        
+
         $validator = Validator::make($request->all(), [
             'login_identifier' => 'required|string',
             'password' => 'required|string',
@@ -368,7 +368,7 @@ class AuthController extends Controller
     {
         // Standardize phone number before validation
         $request->merge(['phone_number' => $this->standardizePhoneNumber($request->phone_number)]);
-        
+
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|string|regex:/^254[0-9]{9}$/',
         ], [
@@ -477,7 +477,7 @@ class AuthController extends Controller
     {
         // Standardize phone number before validation
         $request->merge(['phone_number' => $this->standardizePhoneNumber($request->phone_number)]);
-        
+
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|string|regex:/^254[0-9]{9}$/',
             'code' => 'required|string|size:6',
@@ -690,7 +690,7 @@ class AuthController extends Controller
     {
         // Remove all non-numeric characters
         $phoneNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
-        
+
         // Handle different formats
         if (str_starts_with($phoneNumber, '254')) {
             // Already in 254 format
@@ -702,7 +702,7 @@ class AuthController extends Controller
             // Convert from 7... format to 2547...
             return '254' . $phoneNumber;
         }
-        
+
         // If none of the above, assume it's already in the correct format
         return $phoneNumber;
     }
