@@ -13,7 +13,7 @@ return [
     'username' => env('SMS_USERNAME'),
     'password' => env('SMS_PASSWORD'),
     'base_url' => env('SMS_BASE_URL', 'http://107.20.199.106'),
-    'from' => env('SMS_FROM', 'InfoSMS'),
+    'from' => env('SMS_FROM', 'GRAVITY_CBC'),
     
     /*
     |--------------------------------------------------------------------------
@@ -37,7 +37,7 @@ return [
     |
     */
     
-    'send_system_sms' => env('SEND_SYSTEM_SMS', false),
+    'send_system_sms' => env('SEND_SYSTEM_SMS', false) === '1' || env('SEND_SYSTEM_SMS', false) === true,
     
     /*
     |--------------------------------------------------------------------------
