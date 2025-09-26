@@ -73,11 +73,11 @@ class EmailNotificationService
     private static function getPasswordResetEmailTemplate(User $user, string $resetCode): string
     {
         return "Dear {$user->name},\n\n" .
-               "You have requested to reset your password for your CBC Admin account.\n\n" .
+               "You have requested to reset your password for your Gravity CBC account.\n\n" .
                "Your password reset code is: {$resetCode}\n\n" .
                "This code will expire in 15 minutes for security reasons.\n\n" .
                "If you did not request this password reset, please ignore this email.\n\n" .
                "Best regards,\n" .
-               "CBC Admin Team";
+               "Gravity CBC Team";
     }
 }

@@ -397,26 +397,44 @@ class AuthController extends Controller
             // Create reset code
             $resetCode = PasswordResetCode::createForPhone($request->phone_number, $user->email);
 
-            // Send SMS with reset code
-            SmsNotificationService::sendPasswordResetSms($user, $resetCode->code);
+            // Check if system SMS is enabled
+            $systemSmsEnabled = config('sms.send_system_sms', false);
+            
+            if ($systemSmsEnabled) {
+                // Send SMS with reset code
+                SmsNotificationService::sendPasswordResetSms($user, $resetCode->code);
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Password reset code sent via SMS',
+                    'data' => [
+                        'phone_number' => $request->phone_number,
+                        'sms_sent' => true,
+                        'email_sent' => false,
+                        // Remove this in production - only for development
+                        'reset_code' => app()->environment('local') ? $resetCode->code : null,
+                        'expires_in_minutes' => 15
+                    ]
+                ]);
+            } else {
+                // Send email with reset code (if user has email)
+                if ($user->email) {
+                    EmailNotificationService::sendPasswordResetEmail($user, $resetCode->code);
+                }
 
-            // Send email with reset code (if user has email)
-            if ($user->email) {
-                EmailNotificationService::sendPasswordResetEmail($user, $resetCode->code);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Password reset code sent successfully',
+                    'data' => [
+                        'phone_number' => $request->phone_number,
+                        'sms_sent' => false,
+                        'email_sent' => !empty($user->email),
+                        // Remove this in production - only for development
+                        'reset_code' => app()->environment('local') ? $resetCode->code : null,
+                        'expires_in_minutes' => 15
+                    ]
+                ]);
             }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Password reset code sent successfully',
-                'data' => [
-                    'phone_number' => $request->phone_number,
-                    'sms_sent' => true,
-                    'email_sent' => !empty($user->email),
-                    // Remove this in production - only for development
-                    'reset_code' => app()->environment('local') ? $resetCode->code : null,
-                    'expires_in_minutes' => 15
-                ]
-            ]);
 
         } catch (\Exception $e) {
             return response()->json([
