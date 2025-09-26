@@ -15,10 +15,6 @@ class MpesaPaymentsTable
     {
         return $table
             ->columns([
-                TextColumn::make('payment.transaction_id')
-                    ->label('Payment Transaction')
-                    ->searchable()
-                    ->sortable(),
                 TextColumn::make('mpesa_receipt_number')
                     ->label('M-Pesa Receipt Number')
                     ->searchable()

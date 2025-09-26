@@ -23,21 +23,8 @@ class TokenTransactionsTable
                     ->label('Type')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('amount')
-                    ->label('Amount')
-                    ->money('KES')
-                    ->sortable(),
-                TextColumn::make('balance_before')
-                    ->label('Balance Before')
-                    ->money('KES')
-                    ->sortable(),
-                TextColumn::make('balance_after')
-                    ->label('Balance After')
-                    ->money('KES')
-                    ->sortable(),
-                TextColumn::make('transaction_date')
-                    ->label('Transaction Date')
-                    ->dateTime()
+                TextColumn::make('tokens')
+                    ->label('Tokens')
                     ->sortable(),
                 TextColumn::make('reference')
                     ->label('Reference')

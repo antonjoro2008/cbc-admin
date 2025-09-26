@@ -24,12 +24,9 @@ class WalletsTable
                     ->label('Balance')
                     ->money('KES')
                     ->sortable(),
-                TextColumn::make('currency')
-                    ->label('Currency')
-                    ->searchable()
+                TextColumn::make('available_minutes')
+                    ->label('Available Minutes')
                     ->sortable(),
-                ToggleColumn::make('is_active')
-                    ->label('Active'),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

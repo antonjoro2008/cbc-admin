@@ -24,37 +24,29 @@ class PaymentsTable
                     ->label('Amount')
                     ->money('KES')
                     ->sortable(),
-                TextColumn::make('payment_method')
+                TextColumn::make('channel')
                     ->label('Method')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'completed' => 'success',
                         'pending' => 'warning',
                         'failed' => 'danger',
                         'cancelled' => 'gray',
                         default => 'gray',
                     }),
-                TextColumn::make('transaction_id')
-                    ->label('Transaction ID')
+                TextColumn::make('reference')
+                    ->label('Reference')
                     ->searchable(),
-                TextColumn::make('payment_date')
+                TextColumn::make('created_at')
                     ->label('Payment Date')
                     ->date()
                     ->sortable(),
                 ToggleColumn::make('is_active')
-                    ->label('Active'),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->label('Active')
             ])
             ->filters([
                 //
