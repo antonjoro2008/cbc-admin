@@ -36,11 +36,5 @@ class AppServiceProvider extends ServiceProvider
         DatePicker::configureUsing(function (DatePicker $component) {
             $component->displayFormat('d/m/Y');
         });
-
-        Component::configureUsing(function (Component $component) {
-            if ($label = $component->getLabel()) {
-                $component->label(Str::title($label));
-            }
-        });
     }
 }
