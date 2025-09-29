@@ -71,7 +71,6 @@ class PaymentController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'channel' => 'required|in:mpesa,bank',
             'currency' => 'required|in:KES,USD',
-            'tokens' => 'required|integer|min:1',
             'phone_number' => 'required|string|max:15|regex:/^254[0-9]{9}$/',
             'user_id' => 'required|integer|min:1'
         ]);
@@ -87,6 +86,10 @@ class PaymentController extends Controller
         try {
             DB::beginTransaction();
 
+            // Calculate tokens based on amount and tokens_per_shilling setting
+            $tokensPerShilling = Setting::getValue('tokens_per_shilling', 1.0);
+            $calculatedTokens = floor($request->amount * $tokensPerShilling);
+
             $reference = $this->generateReference();
             // Create payment record
             $payment = Payment::create([
@@ -94,7 +97,7 @@ class PaymentController extends Controller
                 'amount' => $request->amount,
                 'channel' => $request->channel,
                 'currency' => $request->currency,
-                'tokens' => $request->tokens,
+                'tokens' => $calculatedTokens,
                 'status' => 'pending',
                 'reference' => $reference,
             ]);
