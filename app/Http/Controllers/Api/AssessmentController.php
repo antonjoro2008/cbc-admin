@@ -504,6 +504,10 @@ class AssessmentController extends Controller
             $totalMarksForAutoMarked = 0;
             $marksAwarded = 0;
             $feedbackData = [];
+            
+            // Category-specific scoring
+            $categoryScores = [];
+            $categoryTotals = [];
 
             // Process each answer
             foreach ($answers as $answerData) {
@@ -531,6 +535,17 @@ class AssessmentController extends Controller
 
                     if ($isCorrect) {
                         $correctAnswers++;
+                    }
+
+                    // Track category-specific scores
+                    if ($question->category_tag) {
+                        $categoryTag = $question->category_tag;
+                        if (!isset($categoryScores[$categoryTag])) {
+                            $categoryScores[$categoryTag] = 0;
+                            $categoryTotals[$categoryTag] = 0;
+                        }
+                        $categoryScores[$categoryTag] += $marksForQuestion;
+                        $categoryTotals[$categoryTag] += $questionMarks;
                     }
                 } else {
                     $notAutoMarkedQuestions++;
@@ -573,6 +588,7 @@ class AssessmentController extends Controller
                     $feedbackData[] = [
                         'question_number' => $question->question_number,
                         'question_text' => $question->question_text,
+                        'category_tag' => $question->category_tag,
                         'selected_answer' => $this->formatStudentAnswer($questionType, $answer),
                         'is_correct' => $isCorrect,
                         'explanation' => $feedback['all_explanations'],
@@ -584,6 +600,19 @@ class AssessmentController extends Controller
 
             // Calculate percentage based on auto-marked questions only
             $percentage = $totalMarksForAutoMarked > 0 ? round(($marksAwarded / $totalMarksForAutoMarked) * 100, 2) : 0;
+
+            // Calculate category-specific percentages
+            $categoryScoresData = [];
+            foreach ($categoryScores as $categoryTag => $score) {
+                $totalForCategory = $categoryTotals[$categoryTag];
+                $percentageForCategory = $totalForCategory > 0 ? round(($score / $totalForCategory) * 100, 2) : 0;
+                $categoryScoresData[] = [
+                    'category_tag' => $categoryTag,
+                    'score' => $score,
+                    'out_of' => $totalForCategory,
+                    'percentage' => $percentageForCategory
+                ];
+            }
 
             // Update attempt with final score
             $attempt->update(['score' => $marksAwarded]);
@@ -606,6 +635,7 @@ class AssessmentController extends Controller
                         'out_of' => $totalMarksForAutoMarked,
                         'percentage' => $percentage
                     ],
+                    'category_scores' => $categoryScoresData,
                     'feedback' => $feedbackData
                 ]
             ]);

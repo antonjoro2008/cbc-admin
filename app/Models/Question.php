@@ -20,6 +20,7 @@ class Question extends Model
         'assessment_id',
         'question_text',
         'question_type',
+        'category_tag',
         'marks',
         'section_id',
         'question_number',

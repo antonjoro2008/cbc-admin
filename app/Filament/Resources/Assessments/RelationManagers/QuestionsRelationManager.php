@@ -69,6 +69,10 @@ class QuestionsRelationManager extends RelationManager
                 TextColumn::make('marks')
                     ->label('Marks')
                     ->sortable(),
+                TextColumn::make('category_tag')
+                    ->label('Category Tag')
+                    ->placeholder('No tag')
+                    ->sortable(),
             ])
             ->headerActions([
                 CreateAction::make()
@@ -118,6 +122,10 @@ class QuestionsRelationManager extends RelationManager
                                     ->searchable()
                                     ->placeholder('Select parent question if this is a sub-question'),
                             ]),
+                        TextInput::make('category_tag')
+                            ->label('Category Tag (Optional)')
+                            ->placeholder('Enter a category tag for this question...')
+                            ->columnSpanFull(),
                         RichEditor::make('question_text')
                             ->label('Question Text')
                             ->required()
@@ -314,6 +322,7 @@ class QuestionsRelationManager extends RelationManager
                                 'marks' => $question->marks,
                                 'question_type' => $question->question_type,
                                 'parent_question_id' => $question->parent_question_id,
+                                'category_tag' => $question->category_tag,
                                 'question_text' => $question->question_text,
                                 'answers' => $answers,
                                 'media' => $media,
@@ -361,6 +370,10 @@ class QuestionsRelationManager extends RelationManager
                                         ->searchable()
                                         ->placeholder('Select parent question if this is a sub-question'),
                                 ]),
+                            TextInput::make('category_tag')
+                                ->label('Category Tag (Optional)')
+                                ->placeholder('Enter a category tag for this question...')
+                                ->columnSpanFull(),
                             RichEditor::make('question_text')
                                 ->label('Question Text')
                                 ->required()
