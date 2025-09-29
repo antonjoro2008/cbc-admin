@@ -18,7 +18,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Combobox;
 use Filament\Schemas\Components\Grid;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
@@ -124,18 +123,12 @@ class QuestionsRelationManager extends RelationManager
                                     ->searchable()
                                     ->placeholder('Select parent question if this is a sub-question'),
                             ]),
-                        Combobox::make('category_tag')
+                        TextInput::make('category_tag')
                             ->label('Category Tag (Optional)')
-                            ->placeholder('Select or enter a category tag...')
-                            ->searchable()
-                            ->getSearchResultsUsing(fn (string $search): array => 
-                                CategoryTag::where('tag', 'like', "%{$search}%")
-                                    ->limit(10)
-                                    ->pluck('tag', 'tag')
-                                    ->toArray()
+                            ->placeholder('Enter a category tag...')
+                            ->datalist(
+                                CategoryTag::pluck('tag')->toArray()
                             )
-                            ->getOptionLabelUsing(fn ($value): ?string => $value)
-                            ->allowHtml(false)
                             ->columnSpanFull(),
                         RichEditor::make('question_text')
                             ->label('Question Text')
@@ -387,18 +380,12 @@ class QuestionsRelationManager extends RelationManager
                                         ->searchable()
                                         ->placeholder('Select parent question if this is a sub-question'),
                                 ]),
-                            Combobox::make('category_tag')
+                            TextInput::make('category_tag')
                                 ->label('Category Tag (Optional)')
-                                ->placeholder('Select or enter a category tag...')
-                                ->searchable()
-                                ->getSearchResultsUsing(fn (string $search): array => 
-                                    CategoryTag::where('tag', 'like', "%{$search}%")
-                                        ->limit(10)
-                                        ->pluck('tag', 'tag')
-                                        ->toArray()
+                                ->placeholder('Enter a category tag...')
+                                ->datalist(
+                                    CategoryTag::pluck('tag')->toArray()
                                 )
-                                ->getOptionLabelUsing(fn ($value): ?string => $value)
-                                ->allowHtml(false)
                                 ->columnSpanFull(),
                             RichEditor::make('question_text')
                                 ->label('Question Text')
