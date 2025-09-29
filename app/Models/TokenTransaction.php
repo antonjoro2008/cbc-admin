@@ -29,7 +29,7 @@ class TokenTransaction extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'tokens' => 'integer',
+        'tokens' => 'decimal:2',
     ];
 
     /**

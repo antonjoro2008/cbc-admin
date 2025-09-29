@@ -33,7 +33,7 @@ class Payment extends Model
      */
     protected $casts = [
         'amount' => 'decimal:2',
-        'tokens' => 'integer',
+        'tokens' => 'decimal:2',
     ];
 
     /**

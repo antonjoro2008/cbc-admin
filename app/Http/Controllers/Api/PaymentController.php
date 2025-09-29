@@ -88,7 +88,7 @@ class PaymentController extends Controller
 
             // Calculate tokens based on amount and tokens_per_shilling setting
             $tokensPerShilling = Setting::getValue('tokens_per_shilling', 1.0);
-            $calculatedTokens = floor($request->amount * $tokensPerShilling);
+            $calculatedTokens = round($request->amount * $tokensPerShilling, 2);
 
             $reference = $this->generateReference();
             // Create payment record
