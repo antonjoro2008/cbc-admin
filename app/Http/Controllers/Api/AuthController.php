@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Institution;
 use App\Models\Wallet;
 use App\Models\PasswordResetCode;
+use App\Models\Setting;
 use App\Services\SmsNotificationService;
 use App\Services\EmailNotificationService;
 use Illuminate\Http\Request;
@@ -578,11 +579,20 @@ class AuthController extends Controller
 
         $effectiveWallet = $user->getEffectiveWallet();
 
+        // Get system settings for client calculations
+        $tokensPerShilling = Setting::getValue('tokens_per_shilling', 1.0);
+        $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
+
         return [
             'token_balance' => $effectiveWallet->balance ?? 0,
+            'minutes_balance' => $effectiveWallet->available_minutes ?? 0,
             'assessment_stats' => $assessmentStats,
             'recent_assessments' => $recentAssessments,
             'recent_attempts' => $recentAttempts,
+            'settings' => [
+                'tokens_per_shilling' => $tokensPerShilling,
+                'minutes_per_token' => $minutesPerToken,
+            ],
         ];
     }
 
