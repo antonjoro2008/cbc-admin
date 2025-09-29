@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Assessments\RelationManagers;
 use App\Models\AssessmentSection;
 use App\Models\Question;
 use App\Models\Answer;
+use App\Models\CategoryTag;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
@@ -17,6 +18,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Combobox;
 use Filament\Schemas\Components\Grid;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
@@ -122,9 +124,18 @@ class QuestionsRelationManager extends RelationManager
                                     ->searchable()
                                     ->placeholder('Select parent question if this is a sub-question'),
                             ]),
-                        TextInput::make('category_tag')
+                        Combobox::make('category_tag')
                             ->label('Category Tag (Optional)')
-                            ->placeholder('Enter a category tag for this question...')
+                            ->placeholder('Select or enter a category tag...')
+                            ->searchable()
+                            ->getSearchResultsUsing(fn (string $search): array => 
+                                CategoryTag::where('tag', 'like', "%{$search}%")
+                                    ->limit(10)
+                                    ->pluck('tag', 'tag')
+                                    ->toArray()
+                            )
+                            ->getOptionLabelUsing(fn ($value): ?string => $value)
+                            ->allowHtml(false)
                             ->columnSpanFull(),
                         RichEditor::make('question_text')
                             ->label('Question Text')
@@ -237,6 +248,12 @@ class QuestionsRelationManager extends RelationManager
                     ->mutateFormDataUsing(function (array $data, RelationManager $livewire): array {
                         // Automatically set the assessment_id
                         $data['assessment_id'] = $livewire->ownerRecord->id;
+                        
+                        // Create category tag if it doesn't exist
+                        if (!empty($data['category_tag'])) {
+                            CategoryTag::firstOrCreate(['tag' => $data['category_tag']]);
+                        }
+                        
                         return $data;
                     })
                     ->after(function (array $data, $record): void {
@@ -370,9 +387,18 @@ class QuestionsRelationManager extends RelationManager
                                         ->searchable()
                                         ->placeholder('Select parent question if this is a sub-question'),
                                 ]),
-                            TextInput::make('category_tag')
+                            Combobox::make('category_tag')
                                 ->label('Category Tag (Optional)')
-                                ->placeholder('Enter a category tag for this question...')
+                                ->placeholder('Select or enter a category tag...')
+                                ->searchable()
+                                ->getSearchResultsUsing(fn (string $search): array => 
+                                    CategoryTag::where('tag', 'like', "%{$search}%")
+                                        ->limit(10)
+                                        ->pluck('tag', 'tag')
+                                        ->toArray()
+                                )
+                                ->getOptionLabelUsing(fn ($value): ?string => $value)
+                                ->allowHtml(false)
                                 ->columnSpanFull(),
                             RichEditor::make('question_text')
                                 ->label('Question Text')
@@ -482,6 +508,14 @@ class QuestionsRelationManager extends RelationManager
                                 ->collapsible()
                                 ->columnSpanFull(),
                         ])
+                        ->mutateFormDataUsing(function (array $data, $record): array {
+                            // Create category tag if it doesn't exist
+                            if (!empty($data['category_tag'])) {
+                                CategoryTag::firstOrCreate(['tag' => $data['category_tag']]);
+                            }
+                            
+                            return $data;
+                        })
                         ->after(function (array $data, $record): void {
                             // Update answers for the question
                             if (isset($data['answers']) && is_array($data['answers'])) {
