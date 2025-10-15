@@ -75,11 +75,19 @@ class AuthController extends Controller
                 'user_type' => $request->user_type,
             ]);
 
-            // Create wallet for the user
-            // TODO: Remove this temporary feature - crediting new accounts with 20 tokens
-            Wallet::create([
+            // Create wallet for the user with free pilot tokens and minutes
+            $wallet = Wallet::create([
                 'user_id' => $user->id,
-                'balance' => 20, // Temporary: credit new individual accounts with 20 tokens
+                'balance' => 30, // Free pilot tokens
+                'available_minutes' => 1800, // Free pilot minutes
+            ]);
+
+            // Create token transaction record for the free allocation
+            $wallet->tokenTransactions()->create([
+                'transaction_type' => 'credit',
+                'tokens' => 30,
+                'reference' => 'PILOT_FREE_ALLOCATION',
+                'description' => 'Free pilot phase allocation - 30 tokens and 1800 minutes',
             ]);
 
             $token = $user->createToken('auth_token')->plainTextToken;
@@ -91,7 +99,8 @@ class AuthController extends Controller
             $user->load('institution');
 
             // Send registration SMS
-            SmsNotificationService::sendRegistrationSms($user);
+            // TODO: Uncomment when SMS service is ready
+            // SmsNotificationService::sendRegistrationSms($user);
 
             // Prepare user data
             $userData = $user->toArray();
@@ -194,10 +203,19 @@ class AuthController extends Controller
                 'user_type' => 'institution',
             ]);
 
-            // Create wallet for the institution
-            Wallet::create([
+            // Create wallet for the institution with free pilot tokens and minutes
+            $wallet = Wallet::create([
                 'user_id' => $user->id,
-                'balance' => 0,
+                'balance' => 30, // Free pilot tokens
+                'available_minutes' => 1800, // Free pilot minutes
+            ]);
+
+            // Create token transaction record for the free allocation
+            $wallet->tokenTransactions()->create([
+                'transaction_type' => 'credit',
+                'tokens' => 30,
+                'reference' => 'PILOT_FREE_ALLOCATION',
+                'description' => 'Free pilot phase allocation - 30 tokens and 1800 minutes',
             ]);
 
             $token = $user->createToken('auth_token')->plainTextToken;
@@ -209,7 +227,8 @@ class AuthController extends Controller
             $user->load('institution');
 
             // Send registration SMS
-            SmsNotificationService::sendRegistrationSms($user);
+            // TODO: Uncomment when SMS service is ready
+            // SmsNotificationService::sendRegistrationSms($user);
 
             // Prepare user data
             $userData = $user->toArray();
