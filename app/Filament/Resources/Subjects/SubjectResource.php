@@ -11,14 +11,14 @@ use App\Filament\Resources\Subjects\Schemas\SubjectInfolist;
 use App\Filament\Resources\Subjects\Tables\SubjectsTable;
 use App\Filament\Resources\Subjects\RelationManagers\AssessmentsRelationManager;
 use App\Models\Subject;
+use App\Filament\Resources\BaseResource;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class SubjectResource extends Resource
+class SubjectResource extends BaseResource
 {
     protected static ?string $model = Subject::class;
 

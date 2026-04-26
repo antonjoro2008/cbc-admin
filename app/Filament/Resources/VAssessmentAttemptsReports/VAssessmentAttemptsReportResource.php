@@ -9,13 +9,13 @@ use App\Filament\Resources\VAssessmentAttemptsReports\Schemas\VAssessmentAttempt
 use App\Filament\Resources\VAssessmentAttemptsReports\Tables\VAssessmentAttemptsReportsTable;
 use App\Models\VAssessmentAttemptsReport;
 use BackedEnum;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class VAssessmentAttemptsReportResource extends Resource
+class VAssessmentAttemptsReportResource extends BaseResource
 {
     protected static ?string $model = VAssessmentAttemptsReport::class;
 

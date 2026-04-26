@@ -312,7 +312,7 @@ class AuthController extends Controller
         $dashboardData = $this->getDashboardData($user);
 
         // Load user with relationships
-        $user->load('institution', 'wallet');
+        $user->load('institution', 'wallet', 'classroom');
 
         // Prepare user data
         $userData = $user->toArray();

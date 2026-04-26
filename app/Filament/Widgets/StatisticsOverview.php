@@ -11,10 +11,18 @@ use App\Models\User;
 use App\Models\Wallet;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class StatisticsOverview extends StatsOverviewWidget
 {
+    public static function canView(): bool
+    {
+        $user = Auth::user();
+
+        return $user instanceof User && $user->isAdmin();
+    }
+
     protected function getStats(): array
     {
         return [

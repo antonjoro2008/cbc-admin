@@ -13,15 +13,15 @@ use App\Filament\Resources\Users\RelationManagers\CreatedAssessmentsRelationMana
 use App\Filament\Resources\Users\RelationManagers\AssessmentAttemptsRelationManager;
 use App\Filament\Resources\Users\RelationManagers\PaymentsRelationManager;
 use App\Filament\Resources\Users\RelationManagers\ActivityLogsRelationManager;
+use App\Filament\Resources\BaseResource;
 use App\Models\User;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class UserResource extends Resource
+class UserResource extends BaseResource
 {
     protected static ?string $model = User::class;
 

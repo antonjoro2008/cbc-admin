@@ -10,14 +10,14 @@ use App\Filament\Resources\BankPayments\Schemas\BankPaymentForm;
 use App\Filament\Resources\BankPayments\Schemas\BankPaymentInfolist;
 use App\Filament\Resources\BankPayments\Tables\BankPaymentsTable;
 use App\Models\BankPayment;
+use App\Filament\Resources\BaseResource;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class BankPaymentResource extends Resource
+class BankPaymentResource extends BaseResource
 {
     protected static ?string $model = BankPayment::class;
 

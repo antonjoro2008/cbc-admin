@@ -11,14 +11,14 @@ use App\Filament\Resources\Institutions\Schemas\InstitutionInfolist;
 use App\Filament\Resources\Institutions\Tables\InstitutionsTable;
 use App\Filament\Resources\Institutions\RelationManagers\UsersRelationManager;
 use App\Models\Institution;
+use App\Filament\Resources\BaseResource;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class InstitutionResource extends Resource
+class InstitutionResource extends BaseResource
 {
     protected static ?string $model = Institution::class;
 

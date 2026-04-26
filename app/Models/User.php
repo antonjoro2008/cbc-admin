@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -11,10 +13,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+
+    /**
+     * Allowed values for learner gender (CBC reporting & inclusion analytics).
+     * Optional at registration; institutions should collect where policy allows.
+     *
+     * @var list<string>
+     */
+    public const GENDER_VALUES = ['female', 'male', 'non_binary', 'prefer_not_to_say', 'other'];
 
     /**
      * The attributes that are mass assignable.
@@ -23,6 +33,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'institution_id',
+        'classroom_id',
         'name',
         'phone_number',
         'admission_number',
@@ -30,6 +41,9 @@ class User extends Authenticatable
         'password',
         'user_type',
         'grade_level',
+        'gender',
+        'guardian_email',
+        'guardian_phone',
     ];
 
     /**
@@ -61,6 +75,14 @@ class User extends Authenticatable
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    /**
+     * Optional class grouping for institution learners (CBC pilot / analytics).
+     */
+    public function classroom(): BelongsTo
+    {
+        return $this->belongsTo(Classroom::class);
     }
 
     /**
@@ -156,10 +178,26 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if the user is a teacher (institution-scoped).
+     */
+    public function isTeacher(): bool
+    {
+        return $this->user_type === 'teacher';
+    }
+
+    /**
      * Get the learners for the parent.
      */
     public function parentLearners(): HasMany
     {
         return $this->hasMany(ParentLearner::class, 'user_id');
+    }
+
+    /**
+     * Institution admins use the panel for learner analytics; platform admins retain full access.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->isAdmin() || $this->isInstitution();
     }
 }

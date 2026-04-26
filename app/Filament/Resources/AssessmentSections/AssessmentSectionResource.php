@@ -12,13 +12,13 @@ use App\Filament\Resources\AssessmentSections\Tables\AssessmentSectionsTable;
 use App\Filament\Resources\AssessmentSections\RelationManagers\QuestionsRelationManager;
 use App\Models\AssessmentSection;
 use BackedEnum;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class AssessmentSectionResource extends Resource
+class AssessmentSectionResource extends BaseResource
 {
     protected static ?string $model = AssessmentSection::class;
 

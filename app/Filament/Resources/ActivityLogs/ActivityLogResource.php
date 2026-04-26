@@ -10,13 +10,13 @@ use App\Filament\Resources\ActivityLogs\Schemas\ActivityLogForm;
 use App\Filament\Resources\ActivityLogs\Schemas\ActivityLogInfolist;
 use App\Filament\Resources\ActivityLogs\Tables\ActivityLogsTable;
 use App\Models\ActivityLog;
+use App\Filament\Resources\BaseResource;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-class ActivityLogResource extends Resource
+class ActivityLogResource extends BaseResource
 {
     protected static ?string $model = ActivityLog::class;
 

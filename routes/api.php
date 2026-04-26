@@ -11,6 +11,11 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\ParentLearnerController;
 use App\Http\Controllers\Api\InstitutionStudentController;
+use App\Http\Controllers\Api\InstitutionClassroomController;
+use App\Http\Controllers\Api\InstitutionTeacherController;
+use App\Http\Controllers\Api\TeacherStudentController;
+use App\Http\Controllers\Api\TeacherDashboardController;
+use App\Http\Controllers\Api\TeacherShareController;
 use App\Http\Controllers\SmsController;
 
 /*
@@ -90,6 +95,13 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Institution-specific routes (only for institution users)
     Route::middleware('institution')->group(function () {
+        Route::get('/institution/classrooms', [InstitutionClassroomController::class, 'index']);
+        Route::post('/institution/classrooms', [InstitutionClassroomController::class, 'store']);
+
+        Route::get('/institution/teachers', [InstitutionTeacherController::class, 'index']);
+        Route::post('/institution/teachers', [InstitutionTeacherController::class, 'store']);
+        Route::put('/institution/teachers/{teacher}', [InstitutionTeacherController::class, 'update']);
+
         Route::get('/institution/students', [InstitutionStudentController::class, 'index']);
         Route::post('/institution/students', [InstitutionStudentController::class, 'store']);
         Route::post('/institution/students/multiple', [InstitutionStudentController::class, 'storeMultiple']);
@@ -100,6 +112,13 @@ Route::middleware('auth:sanctum')->group(function () {
         
         Route::get('/institution/assessments', [AssessmentController::class, 'institutionAssessments']);
         Route::get('/institution/transactions', [TransactionController::class, 'institutionTransactions']);
+    });
+
+    // Teacher routes (only for teacher users)
+    Route::middleware('teacher')->group(function () {
+        Route::get('/teacher/dashboard', [TeacherDashboardController::class, 'index']);
+        Route::post('/teacher/students', [TeacherStudentController::class, 'store']);
+        Route::post('/teacher/students/{student}/share/guardian-email', [TeacherShareController::class, 'sendGuardianReport']);
     });
     
     // Admin routes (only for admin users)

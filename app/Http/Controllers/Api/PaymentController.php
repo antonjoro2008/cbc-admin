@@ -109,7 +109,7 @@ class PaymentController extends Controller
                 $msisdn = $request->phone_number;
 
                 $stkPayload = [
-                    "orderId" => $reference."-".$msisdn,
+                    "orderId" => "$reference-$msisdn",
                     "msisdn" => $msisdn,
                     "amount" => $request->amount,
                     "profileId" => 0,

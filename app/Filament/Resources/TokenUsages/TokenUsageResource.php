@@ -11,13 +11,13 @@ use App\Filament\Resources\TokenUsages\Schemas\TokenUsageInfolist;
 use App\Filament\Resources\TokenUsages\Tables\TokenUsagesTable;
 use App\Models\TokenUsage;
 use BackedEnum;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class TokenUsageResource extends Resource
+class TokenUsageResource extends BaseResource
 {
     protected static ?string $model = TokenUsage::class;
 

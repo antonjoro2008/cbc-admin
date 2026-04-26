@@ -14,13 +14,13 @@ use App\Filament\Resources\Assessments\RelationManagers\AttemptsRelationManager;
 use App\Filament\Resources\Assessments\RelationManagers\AttemptAnswersRelationManager;
 use App\Models\Assessment;
 use BackedEnum;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class AssessmentResource extends Resource
+class AssessmentResource extends BaseResource
 {
     protected static ?string $model = Assessment::class;
 

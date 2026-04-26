@@ -10,14 +10,14 @@ use App\Filament\Resources\MpesaPayments\Schemas\MpesaPaymentForm;
 use App\Filament\Resources\MpesaPayments\Schemas\MpesaPaymentInfolist;
 use App\Filament\Resources\MpesaPayments\Tables\MpesaPaymentsTable;
 use App\Models\MpesaPayment;
+use App\Filament\Resources\BaseResource;
 use BackedEnum;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class MpesaPaymentResource extends Resource
+class MpesaPaymentResource extends BaseResource
 {
     protected static ?string $model = MpesaPayment::class;
 

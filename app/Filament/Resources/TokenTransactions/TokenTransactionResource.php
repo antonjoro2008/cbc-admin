@@ -11,13 +11,13 @@ use App\Filament\Resources\TokenTransactions\Schemas\TokenTransactionInfolist;
 use App\Filament\Resources\TokenTransactions\Tables\TokenTransactionsTable;
 use App\Models\TokenTransaction;
 use BackedEnum;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class TokenTransactionResource extends Resource
+class TokenTransactionResource extends BaseResource
 {
     protected static ?string $model = TokenTransaction::class;
 

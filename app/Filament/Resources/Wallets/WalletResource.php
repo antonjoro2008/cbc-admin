@@ -11,13 +11,13 @@ use App\Filament\Resources\Wallets\Schemas\WalletInfolist;
 use App\Filament\Resources\Wallets\Tables\WalletsTable;
 use App\Models\Wallet;
 use BackedEnum;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
-class WalletResource extends Resource
+class WalletResource extends BaseResource
 {
     protected static ?string $model = Wallet::class;
     protected static ?string $navigationLabel = 'Customer Wallets';

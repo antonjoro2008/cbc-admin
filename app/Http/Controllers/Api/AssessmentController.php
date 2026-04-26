@@ -14,6 +14,8 @@ use App\Models\FeedbackMedia;
 use App\Models\AnswerMedia;
 use App\Models\Setting;
 use App\Models\TokenUsage;
+use App\Models\User;
+use App\Models\Classroom;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -398,6 +400,7 @@ class AssessmentController extends Controller
             $attempt = AssessmentAttempt::create([
                 'assessment_id' => $assessment->id,
                 'student_id' => $user->id,
+                'classroom_id' => $user->classroom_id,
                 'attempt_number' => $nextAttemptNumber,
                 'started_at' => now(),
                 'completed_at' => null,
@@ -448,6 +451,8 @@ class AssessmentController extends Controller
         $validator = Validator::make($request->all(), [
             'assessment_id' => 'required|exists:assessments,id',
             'user_id' => 'required|exists:users,id',
+            'metadata' => 'sometimes|array',
+            'metadata.classroom_id' => 'sometimes|nullable|integer|exists:classrooms,id',
             'submission_data' => 'required|array',
             'submission_data.start_time' => 'required|date',
             'submission_data.end_time' => 'required|date',
@@ -490,10 +495,29 @@ class AssessmentController extends Controller
                 ], 404);
             }
 
+            $studentUser = User::find($userId);
+            $resolvedClassroomId = $attempt->classroom_id;
+            if ($request->filled('metadata.classroom_id') && $studentUser && $studentUser->institution_id) {
+                $cid = (int) $request->input('metadata.classroom_id');
+                $belongs = Classroom::where('id', $cid)
+                    ->where('institution_id', $studentUser->institution_id)
+                    ->exists();
+                if (!$belongs) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Invalid classroom for this learner.',
+                    ], 422);
+                }
+                $resolvedClassroomId = $cid;
+            } elseif (!$resolvedClassroomId && $studentUser) {
+                $resolvedClassroomId = $studentUser->classroom_id;
+            }
+
             // Update the attempt with completion data
             $attempt->update([
                 'completed_at' => $submissionData['end_time'],
-                'score' => 0 // Will be calculated later
+                'score' => 0, // Will be calculated later
+                'classroom_id' => $resolvedClassroomId,
             ]);
 
             $totalQuestions = $submissionData['total_questions'];

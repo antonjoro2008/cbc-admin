@@ -32,4 +32,9 @@ class Institution extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function classrooms(): HasMany
+    {
+        return $this->hasMany(Classroom::class);
+    }
 }

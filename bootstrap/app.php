@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'institution' => \App\Http\Middleware\InstitutionMiddleware::class,
             'parent' => \App\Http\Middleware\ParentMiddleware::class,
+            'teacher' => \App\Http\Middleware\TeacherMiddleware::class,
         ])->validateCsrfTokens(except: [
                     'api/login',
                     'api/register',

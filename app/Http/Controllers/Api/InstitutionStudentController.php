@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 // Note: Excel import functionality requires Laravel Excel package
 // Install with: composer require maatwebsite/excel
@@ -52,7 +53,8 @@ class InstitutionStudentController extends Controller
             $query->where('grade_level', $request->grade_level);
         }
 
-        $students = $query->orderBy('created_at', 'desc')
+        $students = $query->with('classroom')
+            ->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
 
         return response()->json([
@@ -81,6 +83,16 @@ class InstitutionStudentController extends Controller
             'email' => 'nullable|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Password::defaults()],
             'grade_level' => 'required|string|max:50',
+            'classroom_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('classrooms', 'id')->where(function ($q) use ($user) {
+                    $q->where('institution_id', $user->institution_id);
+                }),
+            ],
+            'guardian_email' => 'nullable|string|email|max:255',
+            'guardian_phone' => 'nullable|string|max:50',
+            'gender' => ['nullable', 'string', Rule::in(User::GENDER_VALUES)],
         ], [
             'name.required' => 'Student name is required.',
             'name.max' => 'Student name cannot exceed 255 characters.',
@@ -110,8 +122,12 @@ class InstitutionStudentController extends Controller
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'institution_id' => $user->institution_id,
+                'classroom_id' => $request->classroom_id,
                 'grade_level' => $request->grade_level,
                 'user_type' => 'student',
+                'guardian_email' => $request->guardian_email,
+                'guardian_phone' => $request->guardian_phone,
+                'gender' => $request->filled('gender') ? $request->gender : null,
                 // Note: No wallet is created for institution students
                 // They share the institution admin's wallet
             ]);
@@ -152,6 +168,14 @@ class InstitutionStudentController extends Controller
             'students.*.email' => 'nullable|string|email|max:255',
             'students.*.password' => ['required', Password::defaults()],
             'students.*.grade_level' => 'required|string|max:50',
+            'students.*.classroom_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('classrooms', 'id')->where(function ($q) use ($user) {
+                    $q->where('institution_id', $user->institution_id);
+                }),
+            ],
+            'students.*.gender' => ['nullable', 'string', Rule::in(User::GENDER_VALUES)],
         ], [
             'students.required' => 'Students data is required.',
             'students.array' => 'Students must be an array.',
@@ -200,8 +224,10 @@ class InstitutionStudentController extends Controller
                     'email' => $studentData['email'] ?? null,
                     'password' => Hash::make($studentData['password']),
                     'institution_id' => $user->institution_id,
+                    'classroom_id' => $studentData['classroom_id'] ?? null,
                     'grade_level' => $studentData['grade_level'],
                     'user_type' => 'student',
+                    'gender' => $studentData['gender'] ?? null,
                 ]);
 
                 $createdStudents[] = $student;
@@ -270,6 +296,16 @@ class InstitutionStudentController extends Controller
             'admission_number' => 'required|string|max:50|unique:users,admission_number,' . $student->id,
             'email' => 'nullable|string|email|max:255|unique:users,email,' . $student->id,
             'grade_level' => 'required|string|max:50',
+            'classroom_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('classrooms', 'id')->where(function ($q) use ($user) {
+                    $q->where('institution_id', $user->institution_id);
+                }),
+            ],
+            'guardian_email' => 'nullable|string|email|max:255',
+            'guardian_phone' => 'nullable|string|max:50',
+            'gender' => ['nullable', 'string', Rule::in(User::GENDER_VALUES)],
         ], [
             'name.required' => 'Student name is required.',
             'name.max' => 'Student name cannot exceed 255 characters.',
@@ -296,6 +332,10 @@ class InstitutionStudentController extends Controller
                 'admission_number' => $request->admission_number,
                 'email' => $request->email,
                 'grade_level' => $request->grade_level,
+                'classroom_id' => $request->classroom_id,
+                'guardian_email' => $request->guardian_email,
+                'guardian_phone' => $request->guardian_phone,
+                'gender' => $request->filled('gender') ? $request->gender : null,
             ]);
 
             return response()->json([
