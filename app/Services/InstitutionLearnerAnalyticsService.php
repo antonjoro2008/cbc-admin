@@ -23,7 +23,7 @@ class InstitutionLearnerAnalyticsService
             ->where('user_type', 'student')
             ->when($classroomId !== null, fn ($q) => $q->where('classroom_id', $classroomId))
             ->orderBy('name')
-            ->get(['id', 'name', 'grade_level', 'gender', 'guardian_email', 'guardian_phone', 'created_at']);
+            ->get(['id', 'name', 'admission_number', 'grade_level', 'gender', 'guardian_email', 'guardian_phone', 'created_at']);
 
         $studentIds = $students->pluck('id')->all();
 
