@@ -6,7 +6,9 @@
     ];
 @endphp
 
+@if (empty($bare))
 <x-filament-widgets::widget>
+@endif
     <x-filament::section
         icon="heroicon-o-light-bulb"
         icon-color="warning"
@@ -33,4 +35,6 @@
             </ul>
         @endif
     </x-filament::section>
+@if (empty($bare))
 </x-filament-widgets::widget>
+@endif

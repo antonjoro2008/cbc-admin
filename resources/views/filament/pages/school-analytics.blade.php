@@ -176,6 +176,7 @@
             @include('filament.widgets.action-items', [
                 'heading' => 'Recommended actions — '.$institution['name'],
                 'action_items' => $a['action_items'],
+                'bare' => true,
             ])
         @endif
     @endif
