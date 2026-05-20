@@ -16,15 +16,19 @@ class PlatformStatsController extends Controller
     /**
      * Public headline counts for the marketing site (skills-zone home page).
      * Returns raw platform totals; the frontend adds these to configured baselines.
+     *
+     * active_users: every registered account (all roles), not filtered by activity.
+     * Label on the marketing site remains "Active Users".
      */
     public function index(): JsonResponse
     {
         $data = Cache::remember(self::CACHE_KEY, self::CACHE_TTL_SECONDS, function (): array {
+            $totalUsers = User::query()->count();
+
             return [
                 'learners' => User::query()->where('user_type', 'student')->count(),
-                'active_users' => User::query()
-                    ->whereIn('user_type', ['parent', 'teacher', 'institution'])
-                    ->count(),
+                'active_users' => $totalUsers,
+                'total_users' => $totalUsers,
             ];
         });
 
