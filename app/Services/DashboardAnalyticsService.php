@@ -49,6 +49,7 @@ class DashboardAnalyticsService
     {
         Cache::forget('dashboard.analytics.admin');
         Cache::forget(self::ADMIN_CACHE_KEY);
+        Cache::forget('dashboard.analytics.platform_learners');
 
         if ($institutionId !== null) {
             Cache::forget("dashboard.analytics.institution.{$institutionId}");
@@ -1224,6 +1225,20 @@ class DashboardAnalyticsService
     }
 
     /**
+     * All platform learners with performance summaries (institution and individual).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function platformLearnerRoster(): array
+    {
+        return Cache::remember(
+            'dashboard.analytics.platform_learners',
+            self::CACHE_TTL_SECONDS,
+            fn () => $this->computePlatformLearnerRoster(),
+        );
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function computeSubjectAnalyticsById(int $subjectId): array
@@ -1244,7 +1259,9 @@ class DashboardAnalyticsService
                 'charts' => [
                     'assessment_performance' => ['labels' => [], 'values' => []],
                     'activity_last_14_days' => ['labels' => [], 'values' => []],
+                    'category_performance' => ['labels' => [], 'values' => []],
                 ],
+                'category_breakdown' => [],
                 'assessment_breakdown' => [],
             ];
         }
@@ -1279,6 +1296,16 @@ class DashboardAnalyticsService
 
         usort($byAssessment, fn (array $a, array $b): int => ($b['completed_attempts'] ?? 0) <=> ($a['completed_attempts'] ?? 0));
 
+        $markedAnswers = AttemptAnswer::query()
+            ->whereHas('attempt', fn ($q) => $q
+                ->whereIn('assessment_id', $assessmentIds)
+                ->whereNotNull('completed_at'))
+            ->whereHas('feedback')
+            ->with(['question:id,category_tag,marks'])
+            ->get(['id', 'attempt_id', 'question_id', 'marks_awarded']);
+
+        $categoryStats = $this->aggregateCategoryPerformance($markedAnswers);
+
         return [
             'subject' => $subject?->only(['id', 'name', 'code']),
             'overview' => [
@@ -1296,7 +1323,9 @@ class DashboardAnalyticsService
                     'values' => array_column($byAssessment, 'average_percent'),
                 ],
                 'activity_last_14_days' => $this->activityChartForStudents($studentIds->all()),
+                'category_performance' => $this->barChartFromStats($categoryStats),
             ],
+            'category_breakdown' => array_values($categoryStats),
             'assessment_breakdown' => $byAssessment,
         ];
     }
@@ -1744,6 +1773,123 @@ class DashboardAnalyticsService
             'top' => $withAttempts,
             'support' => $support,
         ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function computePlatformLearnerRoster(): array
+    {
+        $studentIds = User::query()
+            ->where('user_type', 'student')
+            ->pluck('id');
+
+        if ($studentIds->isEmpty()) {
+            return [];
+        }
+
+        $attempts = AssessmentAttempt::query()
+            ->whereIn('student_id', $studentIds)
+            ->whereNotNull('completed_at')
+            ->orderBy('completed_at', 'desc')
+            ->limit(5000)
+            ->get();
+
+        $since = Carbon::now()->subDays(30)->startOfDay();
+        $inactiveIds = User::query()
+            ->where('user_type', 'student')
+            ->whereDoesntHave('assessmentAttempts', fn ($q) => $q
+                ->whereNotNull('completed_at')
+                ->where('completed_at', '>=', $since))
+            ->pluck('id')
+            ->flip();
+
+        $byStudent = [];
+        foreach ($attempts as $attempt) {
+            $percent = $this->attemptPercent($attempt);
+            if ($percent === null) {
+                continue;
+            }
+            $byStudent[$attempt->student_id]['percents'][] = $percent;
+            $byStudent[$attempt->student_id]['attempts'] = ($byStudent[$attempt->student_id]['attempts'] ?? 0) + 1;
+        }
+
+        $students = User::query()
+            ->with(['institution:id,name', 'classroom:id,name'])
+            ->whereIn('id', $studentIds)
+            ->get([
+                'id',
+                'name',
+                'email',
+                'phone_number',
+                'admission_number',
+                'grade_level',
+                'gender',
+                'classroom_id',
+                'institution_id',
+            ]);
+
+        $roster = [];
+        foreach ($students as $student) {
+            $row = $byStudent[$student->id] ?? null;
+            $avg = $row ? round(collect($row['percents'])->avg(), 2) : null;
+            $attemptsCount = (int) ($row['attempts'] ?? 0);
+            $genderKey = ($student->gender && in_array($student->gender, User::GENDER_VALUES, true))
+                ? $student->gender
+                : 'unspecified';
+
+            if ($inactiveIds->has($student->id)) {
+                $status = 'Inactive (30d)';
+            } elseif ($attemptsCount === 0) {
+                $status = 'No attempts yet';
+            } elseif ($avg !== null && $avg < 50) {
+                $status = 'Needs support';
+            } else {
+                $status = 'On track';
+            }
+
+            $roster[] = [
+                'student_id' => $student->id,
+                'name' => $student->name,
+                'email' => $student->email,
+                'phone_number' => $student->phone_number,
+                'admission_number' => $student->admission_number,
+                'grade_level' => $student->grade_level,
+                'classroom_name' => $student->classroom?->name,
+                'gender' => InstitutionLearnerAnalyticsService::genderLabel($genderKey),
+                'institution_id' => $student->institution_id,
+                'institution_name' => $student->institution_id
+                    ? ($student->institution?->name ?? '—')
+                    : '—',
+                'completed_attempts' => $attemptsCount,
+                'average_percent' => $avg,
+                'competency_level' => $avg !== null
+                    ? $this->cohortAnalytics->competencyDescriptor($avg)
+                    : '—',
+                'status' => $status,
+            ];
+        }
+
+        usort($roster, function (array $a, array $b): int {
+            $avgA = $a['average_percent'];
+            $avgB = $b['average_percent'];
+
+            if ($avgA === null && $avgB === null) {
+                return strcasecmp($a['name'], $b['name']);
+            }
+
+            if ($avgA === null) {
+                return 1;
+            }
+
+            if ($avgB === null) {
+                return -1;
+            }
+
+            return $avgB <=> $avgA;
+        });
+
+        return $roster;
     }
 
     /**

@@ -22,13 +22,25 @@ class UsersTable
                 TextColumn::make('email')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('phone')
+                TextColumn::make('phone_number')
+                    ->label('Phone')
                     ->searchable(),
-                TextColumn::make('role')
+                TextColumn::make('admission_number')
+                    ->label('Admission #')
+                    ->searchable()
+                    ->toggleable(),
+                TextColumn::make('user_type')
+                    ->label('Type')
+                    ->badge()
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('institution.name')
+                    ->label('Institution')
+                    ->searchable()
+                    ->toggleable(),
                 ToggleColumn::make('is_active')
-                    ->label('Active'),
+                    ->label('Active')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

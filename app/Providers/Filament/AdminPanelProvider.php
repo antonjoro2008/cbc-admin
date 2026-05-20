@@ -7,6 +7,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use App\Filament\GlobalSearch\CbcGlobalSearchProvider;
 use App\Filament\Pages\AppDashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -29,6 +30,8 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('/')
+            ->globalSearch(CbcGlobalSearchProvider::class)
+            ->globalSearchFieldKeyBindingSuffix()
             ->brandLogo(fn() => view('components.custom-styles'))
             ->login()
             ->colors([
@@ -44,6 +47,7 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 AppDashboard::class,
                 \App\Filament\Pages\SchoolAnalyticsPage::class,
+                \App\Filament\Pages\LearnersPage::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([

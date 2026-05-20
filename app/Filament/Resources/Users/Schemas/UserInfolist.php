@@ -2,9 +2,10 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
-use Filament\Schemas\Components\Section;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class UserInfolist
@@ -26,13 +27,28 @@ class UserInfolist
                         Grid::make(3)
                             ->columnSpanFull()
                             ->schema([
-                                TextEntry::make('phone')
+                                TextEntry::make('phone_number')
                                     ->label('Phone'),
-                                TextEntry::make('role')
-                                    ->label('Role'),
+                                TextEntry::make('user_type')
+                                    ->label('User type')
+                                    ->badge(),
+                                TextEntry::make('admission_number')
+                                    ->label('Admission #')
+                                    ->placeholder('—'),
                             ]),
-                        TextEntry::make('is_active')
+                        Grid::make(2)
+                            ->columnSpanFull()
+                            ->schema([
+                                TextEntry::make('institution.name')
+                                    ->label('Institution')
+                                    ->placeholder('—'),
+                                TextEntry::make('grade_level')
+                                    ->label('Grade')
+                                    ->placeholder('—'),
+                            ]),
+                        IconEntry::make('is_active')
                             ->label('Active')
+                            ->boolean()
                             ->columnSpanFull(),
                     ]),
                 Section::make('Timestamps')

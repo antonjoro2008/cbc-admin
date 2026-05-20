@@ -22,7 +22,7 @@ class VAssessmentAttemptsReportResource extends BaseResource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
     protected static string|UnitEnum|null $navigationGroup = 'Reports';
 
-    protected static ?string $recordTitleAttribute = 'Assessments Report';
+    protected static bool $isGloballySearchable = false;
     protected static ?string $pluralModelLabel = 'Assessment Attempts Reports';
     protected static ?string $modelLabel = 'Assessment Attempts Report';
     protected static ?string $navigationLabel = 'Assessment Attempts Reports';
