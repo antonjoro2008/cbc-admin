@@ -12,7 +12,9 @@
                 <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/5 dark:text-gray-400">
                     <tr>
                         <th class="px-3 py-2 font-medium">Student</th>
-                        <th class="px-3 py-2 font-medium">School</th>
+                        @if (empty($hide_school))
+                            <th class="px-3 py-2 font-medium">School</th>
+                        @endif
                         <th class="px-3 py-2 font-medium">Gender</th>
                         @if (($variant ?? 'top') === 'support')
                             <th class="px-3 py-2 font-medium">Grade</th>
@@ -25,7 +27,9 @@
                     @forelse ($students as $student)
                         <tr class="text-gray-700 dark:text-gray-200">
                             <td class="px-3 py-2 font-medium text-gray-950 dark:text-white">{{ $student['name'] }}</td>
-                            <td class="px-3 py-2">{{ $student['institution_name'] ?? '—' }}</td>
+                            @if (empty($hide_school))
+                                <td class="px-3 py-2">{{ $student['institution_name'] ?? '—' }}</td>
+                            @endif
                             <td class="px-3 py-2">{{ $student['gender'] ?? '—' }}</td>
                             @if (($variant ?? 'top') === 'support')
                                 <td class="px-3 py-2">{{ $student['grade_level'] ?? '—' }}</td>
@@ -37,7 +41,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ ($variant ?? 'top') === 'support' ? 6 : 5 }}" class="px-3 py-6 text-center text-gray-500">
+                            <td colspan="{{ (($variant ?? 'top') === 'support' ? 5 : 4) - (empty($hide_school) ? 0 : 1) }}" class="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
                                 No data yet.
                             </td>
                         </tr>

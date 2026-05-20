@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Widgets\Concerns\AdminOnlyWidget;
 use App\Filament\Widgets\Concerns\LazyAnalyticsWidget;
 use App\Services\DashboardAnalyticsService;
+use App\Support\GravityCbcColors;
 use Filament\Widgets\ChartWidget;
 
 class PlatformCompetencyDistributionChartWidget extends ChartWidget
@@ -35,7 +36,7 @@ class PlatformCompetencyDistributionChartWidget extends ChartWidget
                 [
                     'label' => 'Attempts',
                     'data' => $chart['values'],
-                    'backgroundColor' => ['#EF4444', '#F59E0B', '#3B82F6', '#10B981'],
+                    'backgroundColor' => GravityCbcColors::competencyBands(),
                 ],
             ],
         ];

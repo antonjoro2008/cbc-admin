@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\User;
 use App\Services\InstitutionLearnerAnalyticsService;
+use App\Support\GravityCbcColors;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
 
@@ -43,8 +44,8 @@ class InstitutionAssessmentTrendChartWidget extends ChartWidget
                 [
                     'label' => 'Completed assessments',
                     'data' => $extras['chart_values'],
-                    'borderColor' => '#705EBC',
-                    'backgroundColor' => 'rgba(112, 94, 188, 0.12)',
+                    'borderColor' => GravityCbcColors::GREEN,
+                    'backgroundColor' => GravityCbcColors::rgbaGreen(0.12),
                     'fill' => true,
                     'tension' => 0.35,
                 ],

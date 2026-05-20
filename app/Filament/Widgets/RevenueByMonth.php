@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\AdminOnlyWidget;
 use App\Models\Payment;
+use App\Support\GravityCbcColors;
 use Filament\Widgets\ChartWidget;
 
 class RevenueByMonth extends ChartWidget
@@ -39,8 +40,8 @@ class RevenueByMonth extends ChartWidget
                 [
                     'label' => 'Revenue (KES)',
                     'data' => $revenue->toArray(),
-                    'borderColor' => '#10B981',
-                    'backgroundColor' => 'rgba(16, 185, 129, 0.1)',
+                    'borderColor' => GravityCbcColors::GREEN,
+                    'backgroundColor' => GravityCbcColors::rgbaGreen(0.1),
                     'fill' => true,
                     'tension' => 0.4,
                 ],

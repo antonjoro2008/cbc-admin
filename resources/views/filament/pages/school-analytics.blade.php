@@ -1,20 +1,6 @@
 <x-filament-panels::page>
-    <div class="mb-6">
-        <label for="institution-select" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Select school / institution
-        </label>
-        <select
-            id="institution-select"
-            wire:model.live="institutionId"
-            class="block w-full max-w-md rounded-lg border-gray-300 bg-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-white/10 dark:bg-gray-900 dark:text-white"
-        >
-            @foreach ($institutions as $id => $name)
-                <option value="{{ $id }}">{{ $name }}</option>
-            @endforeach
-        </select>
-        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            View the full institution dashboard for any school — same analytics an institution admin sees.
-        </p>
+    <div class="mb-6 max-w-xl">
+        {{ $this->institutionSelect }}
     </div>
 
     @php
@@ -22,156 +8,162 @@
         $summary = $a['summary'] ?? [];
         $insights = $a['insights'] ?? [];
         $institution = $a['institution'] ?? null;
+        $learnerCount = (int) ($summary['learners'] ?? 0);
     @endphp
 
-    @if (empty($a) || ! $institutionId)
+    @if (! $institutionId || ! $institution)
         <x-filament::section>
-            <p class="text-sm text-gray-500">No institutions registered yet.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">No institutions registered yet.</p>
+        </x-filament::section>
+    @elseif ($learnerCount === 0)
+        <x-filament::section
+            icon="heroicon-o-building-office-2"
+            :heading="$institution['name']"
+            description="This school has no learners on the platform yet."
+        >
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                Once students are linked to this institution, analytics for classrooms, gender equity, competency areas, and individual outcomes will appear here.
+            </p>
         </x-filament::section>
     @else
         <x-filament::section
             icon="heroicon-o-building-office-2"
-            :heading="$institution['name'] ?? 'Institution'"
-            description="Institution-scoped analytics — learners, classrooms, gender equity, competency areas, and outcomes."
+            :heading="$institution['name']"
+            description="Institution-scoped analytics — learners, classrooms, gender equity, competency areas, and student outcomes."
             class="mb-6"
         />
 
-        {{-- Summary stats --}}
-        <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            @foreach ([
-                ['Learners', $summary['learners'] ?? 0],
-                ['Teachers', $summary['teachers'] ?? 0],
-                ['Classrooms', $summary['classrooms'] ?? 0],
-                ['Avg score', ($insights['average_percent'] ?? 0).'%'],
-                ['CBE level', $insights['average_level'] ?? '—'],
-                ['Trending up', ($insights['learners_improving_percent'] ?? 0).'%'],
-                ['Attempts (30d)', $summary['completed_attempts_last_30_days'] ?? 0],
-                ['Guardian email', ($summary['guardian_email_coverage_percent'] ?? 0).'%'],
-            ] as [$label, $value])
-                <div class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $label }}</p>
-                    <p class="mt-2 text-2xl font-semibold tabular-nums text-gray-950 dark:text-white">{{ $value }}</p>
-                </div>
-            @endforeach
-        </div>
+        @include('filament.partials.analytics-stats-table', [
+            'stats' => [
+                ['label' => 'Learners', 'value' => $summary['learners'] ?? 0],
+                ['label' => 'Teachers', 'value' => $summary['teachers'] ?? 0],
+                ['label' => 'Classrooms', 'value' => $summary['classrooms'] ?? 0],
+                ['label' => 'Average score', 'value' => number_format($insights['average_percent'] ?? 0, 1).'%'],
+                ['label' => 'CBE level', 'value' => $insights['average_level'] ?? '—'],
+                ['label' => 'Learners trending up', 'value' => ($insights['learners_improving_percent'] ?? 0).'%'],
+                ['label' => 'Completed attempts (30 days)', 'value' => $summary['completed_attempts_last_30_days'] ?? 0],
+                ['label' => 'Guardian email coverage', 'value' => number_format($summary['guardian_email_coverage_percent'] ?? 0, 1).'%'],
+            ],
+        ])
 
-        {{-- Gender inclusion --}}
         @if (! empty($inclusionView))
-            @include('filament.partials.inclusion-segments', array_merge($inclusionView, [
-                'heading' => 'Gender & inclusion — '.($institution['name'] ?? 'School'),
-                'description' => 'Roster and outcome segmentation for this school.',
-            ]))
-        @endif
-
-        {{-- Classroom breakdown --}}
-        @if (! empty($a['classroom_breakdown']))
             <div class="my-6">
-                <x-filament::section heading="Classrooms" description="Performance comparison across classes at this school.">
-                    <div class="overflow-x-auto rounded-xl ring-1 ring-gray-950/5 dark:ring-white/10">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/5">
-                                <tr>
-                                    <th class="px-4 py-2">Class</th>
-                                    <th class="px-4 py-2">Grade</th>
-                                    <th class="px-4 py-2 text-end">Students</th>
-                                    <th class="px-4 py-2 text-end">Attempts</th>
-                                    <th class="px-4 py-2 text-end">Avg %</th>
-                                    <th class="px-4 py-2">CBE level</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 dark:divide-white/10">
-                                @foreach ($a['classroom_breakdown'] as $row)
-                                    <tr>
-                                        <td class="px-4 py-2.5 font-medium">{{ $row['classroom_name'] }}</td>
-                                        <td class="px-4 py-2.5">{{ $row['grade_level'] ?? '—' }}</td>
-                                        <td class="px-4 py-2.5 text-end tabular-nums">{{ $row['student_count'] }}</td>
-                                        <td class="px-4 py-2.5 text-end tabular-nums">{{ $row['completed_attempts'] }}</td>
-                                        <td class="px-4 py-2.5 text-end tabular-nums font-medium">{{ number_format($row['average_percent'], 1) }}%</td>
-                                        <td class="px-4 py-2.5 text-xs">{{ $row['competency_level'] }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </x-filament::section>
+                @include('filament.partials.school-inclusion-section', array_merge($inclusionView, [
+                    'heading' => 'Gender & inclusion — '.$institution['name'],
+                    'description' => 'Roster and outcome segmentation for this school.',
+                ]))
             </div>
         @endif
 
-        {{-- Category / competency areas --}}
+        @if (! empty($a['classroom_breakdown']))
+            <div class="my-6">
+                @include('filament.partials.analytics-data-table', [
+                    'heading' => 'Classrooms',
+                    'description' => 'Performance comparison across classes at this school.',
+                    'icon' => 'heroicon-o-rectangle-group',
+                    'iconColor' => 'info',
+                    'columns' => [
+                        ['key' => 'classroom_name', 'label' => 'Class', 'emphasis' => true],
+                        ['key' => 'grade_level', 'label' => 'Grade'],
+                        ['key' => 'student_count', 'label' => 'Students', 'align' => 'end'],
+                        ['key' => 'completed_attempts', 'label' => 'Attempts', 'align' => 'end'],
+                        [
+                            'key' => 'average_percent',
+                            'label' => 'Avg %',
+                            'align' => 'end',
+                            'format' => fn ($value) => number_format((float) $value, 1).'%',
+                        ],
+                        ['key' => 'competency_level', 'label' => 'CBE level'],
+                    ],
+                    'rows' => $a['classroom_breakdown'],
+                ])
+            </div>
+        @endif
+
         <div class="my-6 grid gap-6 lg:grid-cols-2">
             @if (! empty($a['class_strengths']))
-                <x-filament::section heading="Competency strengths" icon="heroicon-o-star" icon-color="success">
-                    <ul class="space-y-3 text-sm">
-                        @foreach ($a['class_strengths'] as $item)
-                            <li class="rounded-lg border border-success-200 bg-success-50/50 p-3 dark:border-success-500/20 dark:bg-success-500/5">
-                                <p class="font-medium text-gray-950 dark:text-white">{{ $item['label'] }} — {{ $item['average_percent'] }}%</p>
-                                <p class="mt-1 text-gray-600 dark:text-gray-300">{{ $item['insight'] ?? '' }}</p>
-                            </li>
-                        @endforeach
-                    </ul>
-                </x-filament::section>
+                @include('filament.partials.category-competency-table', [
+                    'heading' => 'Competency strengths',
+                    'description' => 'Highest-scoring category tags from marked answers.',
+                    'records' => $a['class_strengths'],
+                    'sort' => 'desc',
+                ])
             @endif
             @if (! empty($a['class_weaknesses']))
-                <x-filament::section heading="Areas for improvement" icon="heroicon-o-exclamation-triangle" icon-color="warning">
-                    <ul class="space-y-3 text-sm">
-                        @foreach ($a['class_weaknesses'] as $item)
-                            <li class="rounded-lg border border-warning-200 bg-warning-50/50 p-3 dark:border-warning-500/20 dark:bg-warning-500/5">
-                                <p class="font-medium text-gray-950 dark:text-white">{{ $item['label'] }} — {{ $item['average_percent'] }}%</p>
-                                <p class="mt-1 text-gray-600 dark:text-gray-300">{{ $item['recommended_action'] ?? $item['insight'] ?? '' }}</p>
-                            </li>
-                        @endforeach
-                    </ul>
-                </x-filament::section>
+                @include('filament.partials.category-competency-table', [
+                    'heading' => 'Areas for improvement',
+                    'description' => 'Lowest-scoring competency tags at this school.',
+                    'records' => $a['class_weaknesses'],
+                    'sort' => 'asc',
+                ])
             @endif
         </div>
 
-        {{-- Students --}}
+        {{-- Full student roster — all learners at this school --}}
+        @if (! empty($a['student_roster']))
+            <div class="my-6">
+                @include('filament.partials.analytics-data-table', [
+                    'heading' => 'All students — performance summary',
+                    'description' => 'Every learner at this school with assessment outcomes where available.',
+                    'icon' => 'heroicon-o-academic-cap',
+                    'iconColor' => 'primary',
+                    'empty' => 'No students registered at this school.',
+                    'columns' => [
+                        ['key' => 'name', 'label' => 'Student', 'emphasis' => true],
+                        ['key' => 'admission_number', 'label' => 'Admission #'],
+                        ['key' => 'grade_level', 'label' => 'Grade'],
+                        ['key' => 'classroom_name', 'label' => 'Class'],
+                        ['key' => 'gender', 'label' => 'Gender'],
+                        ['key' => 'completed_attempts', 'label' => 'Attempts', 'align' => 'end'],
+                        [
+                            'key' => 'average_percent',
+                            'label' => 'Avg %',
+                            'align' => 'end',
+                            'format' => fn ($value) => $value !== null ? number_format((float) $value, 1).'%' : '—',
+                        ],
+                        ['key' => 'competency_level', 'label' => 'CBE level'],
+                    ],
+                    'rows' => $a['student_roster'],
+                ])
+            </div>
+        @endif
+
         <div class="my-6 grid gap-6 lg:grid-cols-2">
             @include('filament.widgets.platform-students-table', [
                 'heading' => 'Top performers',
-                'description' => 'At this school.',
+                'description' => 'Highest average scores at this school.',
                 'students' => $a['top_performers'] ?? [],
                 'variant' => 'top',
                 'bare' => true,
+                'hide_school' => true,
             ])
             @include('filament.widgets.platform-students-table', [
                 'heading' => 'Learners needing support',
-                'description' => 'Below 50% at this school.',
+                'description' => 'Below 50% average at this school.',
                 'students' => $a['learners_needing_support'] ?? [],
                 'variant' => 'support',
                 'bare' => true,
+                'hide_school' => true,
             ])
         </div>
 
-        {{-- Inactive learners --}}
         @if (! empty($a['inactive_learners']))
             <div class="my-6">
-                <x-filament::section heading="Inactive learners (30 days)" icon="heroicon-o-user-minus" icon-color="danger">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead class="text-xs uppercase text-gray-500">
-                                <tr>
-                                    <th class="px-3 py-2">Name</th>
-                                    <th class="px-3 py-2">Admission #</th>
-                                    <th class="px-3 py-2">Grade</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 dark:divide-white/10">
-                                @foreach ($a['inactive_learners'] as $learner)
-                                    <tr>
-                                        <td class="px-3 py-2">{{ $learner['name'] }}</td>
-                                        <td class="px-3 py-2">{{ $learner['admission_number'] ?? '—' }}</td>
-                                        <td class="px-3 py-2">{{ $learner['grade_level'] ?? '—' }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </x-filament::section>
+                @include('filament.partials.analytics-data-table', [
+                    'heading' => 'Inactive learners (30 days)',
+                    'description' => 'Students with no completed attempts in the last 30 days.',
+                    'icon' => 'heroicon-o-user-minus',
+                    'iconColor' => 'danger',
+                    'columns' => [
+                        ['key' => 'name', 'label' => 'Name', 'emphasis' => true],
+                        ['key' => 'admission_number', 'label' => 'Admission #'],
+                        ['key' => 'grade_level', 'label' => 'Grade'],
+                    ],
+                    'rows' => $a['inactive_learners'],
+                ])
             </div>
         @endif
 
-        {{-- Action items --}}
         @if (! empty($a['action_items']))
             @include('filament.widgets.action-items', [
                 'heading' => 'Recommended actions — '.$institution['name'],

@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Support\GravityCbcColors;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -31,9 +32,12 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(fn() => view('components.custom-styles'))
             ->login()
             ->colors([
-                'primary' => '#705EBC',
-                'secondary' => '#FB953B',
-                'success' => '#999999'
+                'primary' => Color::hex(GravityCbcColors::GREEN),
+                'secondary' => Color::hex(GravityCbcColors::BLUE),
+                'success' => Color::hex(GravityCbcColors::GREEN),
+                'info' => Color::hex(GravityCbcColors::BLUE),
+                'warning' => Color::hex(GravityCbcColors::BLUE_LIGHT),
+                'danger' => Color::hex(GravityCbcColors::RED),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

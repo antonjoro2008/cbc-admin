@@ -5,9 +5,11 @@ namespace App\Filament\Pages;
 use App\Models\Institution;
 use App\Models\User;
 use App\Services\DashboardAnalyticsService;
-use Filament\Pages\Page;
-use Filament\Support\Icons\Heroicon;
 use BackedEnum;
+use Filament\Forms\Components\Select;
+use Filament\Pages\Page;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 
 class SchoolAnalyticsPage extends Page
 {
@@ -35,9 +37,19 @@ class SchoolAnalyticsPage extends Page
         $this->institutionId = Institution::query()->orderBy('name')->value('id');
     }
 
-    public function updatedInstitutionId(): void
+    public function institutionSelect(Schema $schema): Schema
     {
-        // Livewire refresh — view data recomputes on re-render.
+        return $schema
+            ->components([
+                Select::make('institutionId')
+                    ->label('Select school / institution')
+                    ->options(fn (): array => Institution::orderBy('name')->pluck('name', 'id')->all())
+                    ->searchable()
+                    ->live()
+                    ->native(false)
+                    ->helperText('View institution-level analytics for any registered school — same depth as an institution admin dashboard.')
+                    ->columnSpanFull(),
+            ]);
     }
 
     /**
@@ -51,7 +63,6 @@ class SchoolAnalyticsPage extends Page
             return [
                 'analytics' => [],
                 'inclusionView' => [],
-                'institutions' => Institution::orderBy('name')->pluck('name', 'id'),
             ];
         }
 
@@ -60,7 +71,6 @@ class SchoolAnalyticsPage extends Page
         return [
             'analytics' => $analytics,
             'inclusionView' => $service->formatInclusionForView($analytics['inclusion_metrics'] ?? []),
-            'institutions' => Institution::orderBy('name')->pluck('name', 'id'),
         ];
     }
 }

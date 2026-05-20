@@ -230,6 +230,7 @@ class DashboardAnalyticsService
             'class_weaknesses' => $categoryWeaknesses,
             'top_performers' => array_slice($learnerSummaries['top'], 0, 10),
             'learners_needing_support' => array_slice($learnerSummaries['support'], 0, 10),
+            'student_roster' => $this->institutionStudentRoster($studentIds, $attempts),
             'subject_breakdown' => array_values($subjectPerformance),
             'inactive_learners' => $inactiveLearners,
             'recent_activity' => $this->recentAttemptSummaries($attempts->take(15)),
@@ -1291,6 +1292,62 @@ class DashboardAnalyticsService
             'top' => $withAttempts,
             'support' => $support,
         ];
+    }
+
+    /**
+     * Full learner roster for an institution with attempt summaries where available.
+     *
+     * @param  Collection<int, int|string>|array<int, int|string>  $studentIds
+     * @param  Collection<int, AssessmentAttempt>  $attempts
+     * @return list<array<string, mixed>>
+     */
+    private function institutionStudentRoster($studentIds, Collection $attempts): array
+    {
+        $studentIds = collect($studentIds)->filter()->unique()->values();
+        if ($studentIds->isEmpty()) {
+            return [];
+        }
+
+        $byStudent = [];
+        foreach ($attempts as $attempt) {
+            $percent = $this->attemptPercent($attempt);
+            if ($percent === null) {
+                continue;
+            }
+            $byStudent[$attempt->student_id]['percents'][] = $percent;
+            $byStudent[$attempt->student_id]['attempts'] = ($byStudent[$attempt->student_id]['attempts'] ?? 0) + 1;
+        }
+
+        $students = User::query()
+            ->with('classroom:id,name')
+            ->whereIn('id', $studentIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'admission_number', 'grade_level', 'gender', 'classroom_id']);
+
+        $roster = [];
+        foreach ($students as $student) {
+            $row = $byStudent[$student->id] ?? null;
+            $avg = $row ? round(collect($row['percents'])->avg(), 2) : null;
+            $genderKey = ($student->gender && in_array($student->gender, User::GENDER_VALUES, true))
+                ? $student->gender
+                : 'unspecified';
+
+            $roster[] = [
+                'student_id' => $student->id,
+                'name' => $student->name,
+                'admission_number' => $student->admission_number,
+                'grade_level' => $student->grade_level,
+                'classroom_name' => $student->classroom?->name,
+                'gender' => InstitutionLearnerAnalyticsService::genderLabel($genderKey),
+                'completed_attempts' => $row['attempts'] ?? 0,
+                'average_percent' => $avg,
+                'competency_level' => $avg !== null
+                    ? $this->cohortAnalytics->competencyDescriptor($avg)
+                    : '—',
+            ];
+        }
+
+        return $roster;
     }
 
     /**

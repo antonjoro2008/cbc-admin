@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\User;
 use App\Services\DashboardAnalyticsService;
+use App\Support\GravityCbcColors;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
 
@@ -40,7 +41,7 @@ class InstitutionClassroomComparisonChartWidget extends ChartWidget
                 [
                     'label' => 'Average %',
                     'data' => array_column($classrooms, 'average_percent'),
-                    'backgroundColor' => 'rgba(59, 130, 246, 0.75)',
+                    'backgroundColor' => GravityCbcColors::rgbaBlue(0.75),
                 ],
             ],
         ];

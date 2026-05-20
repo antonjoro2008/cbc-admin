@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Widgets\Concerns\AdminOnlyWidget;
 use App\Filament\Widgets\Concerns\LazyAnalyticsWidget;
 use App\Services\DashboardAnalyticsService;
+use App\Support\GravityCbcColors;
 use Filament\Widgets\ChartWidget;
 
 class PlatformClassroomComparisonChartWidget extends ChartWidget
@@ -35,7 +36,7 @@ class PlatformClassroomComparisonChartWidget extends ChartWidget
                 [
                     'label' => 'Average %',
                     'data' => $chart['values'],
-                    'backgroundColor' => 'rgba(20, 184, 166, 0.75)',
+                    'backgroundColor' => GravityCbcColors::rgbaBlue(0.75),
                 ],
             ],
         ];

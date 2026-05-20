@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\User;
 use App\Services\DashboardAnalyticsService;
+use App\Support\GravityCbcColors;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
 
@@ -40,7 +41,7 @@ class InstitutionCompetencyDistributionChartWidget extends ChartWidget
                 [
                     'label' => 'Attempts',
                     'data' => array_values($dist),
-                    'backgroundColor' => ['#EF4444', '#F59E0B', '#3B82F6', '#10B981'],
+                    'backgroundColor' => GravityCbcColors::competencyBands(),
                 ],
             ],
         ];

@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Widgets\Concerns\AdminOnlyWidget;
 use App\Filament\Widgets\Concerns\LazyAnalyticsWidget;
 use App\Services\DashboardAnalyticsService;
+use App\Support\GravityCbcColors;
 use Filament\Widgets\ChartWidget;
 
 class PlatformUsersByTypeChartWidget extends ChartWidget
@@ -34,7 +35,13 @@ class PlatformUsersByTypeChartWidget extends ChartWidget
             'datasets' => [
                 [
                     'data' => $chart['values'],
-                    'backgroundColor' => ['#705EBC', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'],
+                    'backgroundColor' => [
+                        GravityCbcColors::GREEN,
+                        GravityCbcColors::BLUE,
+                        GravityCbcColors::BLUE_LIGHT,
+                        GravityCbcColors::RED,
+                        GravityCbcColors::GREEN,
+                    ],
                 ],
             ],
         ];

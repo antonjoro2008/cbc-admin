@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Filament\Widgets\Concerns\AdminOnlyWidget;
 use App\Filament\Widgets\Concerns\LazyAnalyticsWidget;
 use App\Services\DashboardAnalyticsService;
+use App\Support\GravityCbcColors;
 use Filament\Widgets\ChartWidget;
 
 class PlatformGradeLevelChartWidget extends ChartWidget
@@ -35,7 +36,7 @@ class PlatformGradeLevelChartWidget extends ChartWidget
                 [
                     'label' => 'Students',
                     'data' => $chart['values'],
-                    'backgroundColor' => '#705EBC',
+                    'backgroundColor' => GravityCbcColors::GREEN,
                 ],
             ],
         ];

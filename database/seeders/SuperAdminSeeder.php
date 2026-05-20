@@ -27,8 +27,8 @@ class SuperAdminSeeder extends Seeder
                 'website' => 'https://example.com',
                 'logo_path' => null,
                 'banner_path' => null,
-                'primary_color' => '#705EBC',
-                'secondary_color' => '#FB953B',
+                'primary_color' => '#90C142',
+                'secondary_color' => '#3D90C7',
                 'is_active' => true,
             ]
         );

@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\User;
 use App\Services\DashboardAnalyticsService;
+use App\Support\GravityCbcColors;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
 
@@ -40,7 +41,7 @@ class InstitutionCategoryPerformanceChartWidget extends ChartWidget
                 [
                     'label' => 'Average %',
                     'data' => $chart['values'],
-                    'backgroundColor' => 'rgba(245, 158, 11, 0.75)',
+                    'backgroundColor' => GravityCbcColors::rgbaRed(0.75),
                 ],
             ],
         ];
