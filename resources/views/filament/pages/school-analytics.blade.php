@@ -57,10 +57,8 @@
 
         {{-- Gender inclusion --}}
         @if (! empty($inclusionView))
-            @include('filament.widgets.inclusion-report', array_merge($inclusionView, [
-                'scope_label' => 'institution',
-                'show_color_legend' => true,
-                'heading' => 'Gender & inclusion — '.$institution['name'],
+            @include('filament.partials.inclusion-segments', array_merge($inclusionView, [
+                'heading' => 'Gender & inclusion — '.($institution['name'] ?? 'School'),
                 'description' => 'Roster and outcome segmentation for this school.',
             ]))
         @endif

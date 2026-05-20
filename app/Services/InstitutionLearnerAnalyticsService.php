@@ -7,9 +7,12 @@ use App\Models\Classroom;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class InstitutionLearnerAnalyticsService
 {
+    /** @var array<int, int> */
+    private array $assessmentTotalMarks = [];
     /**
      * Learner roster, CBE-style insights, and inclusion metrics for an institution cohort
      * (optionally scoped to a single classroom for teachers).
@@ -48,10 +51,12 @@ class InstitutionLearnerAnalyticsService
             ->limit($attemptsLimit)
             ->get();
 
+        $this->warmAssessmentMarksForAttempts($attempts);
+
         $avgPercent = 0.0;
         $percentCount = 0;
         foreach ($attempts as $a) {
-            $outOf = $a->assessment?->questions()->sum('marks') ?: null;
+            $outOf = $this->assessmentTotalMarks[(int) $a->assessment_id] ?? null;
             if ($outOf && $a->score !== null) {
                 $avgPercent += (float) (($a->score / $outOf) * 100);
                 $percentCount++;
@@ -109,14 +114,29 @@ class InstitutionLearnerAnalyticsService
 
         $labels = [];
         $values = [];
+        $indexByDay = [];
         for ($i = 13; $i >= 0; $i--) {
             $day = Carbon::now()->subDays($i)->startOfDay();
+            $key = $day->format('Y-m-d');
+            $indexByDay[$key] = count($labels);
             $labels[] = $day->format('M j');
-            $values[] = (int) AssessmentAttempt::query()
-                ->whereIn('student_id', $studentIds)
-                ->whereNotNull('completed_at')
-                ->whereBetween('completed_at', [$day, (clone $day)->endOfDay()])
-                ->count();
+            $values[] = 0;
+        }
+
+        $since = Carbon::now()->subDays(13)->startOfDay();
+        $counts = AssessmentAttempt::query()
+            ->whereIn('student_id', $studentIds)
+            ->whereNotNull('completed_at')
+            ->where('completed_at', '>=', $since)
+            ->selectRaw('DATE(completed_at) as activity_day, COUNT(*) as total')
+            ->groupBy('activity_day')
+            ->pluck('total', 'activity_day');
+
+        foreach ($counts as $day => $total) {
+            $key = Carbon::parse($day)->format('Y-m-d');
+            if (isset($indexByDay[$key])) {
+                $values[$indexByDay[$key]] = (int) $total;
+            }
         }
 
         return [
@@ -190,8 +210,9 @@ class InstitutionLearnerAnalyticsService
         }
 
         $agg = [];
+        $this->warmAssessmentMarksForAttempts($attempts);
         foreach ($attempts as $a) {
-            $outOf = $a->assessment?->questions()->sum('marks') ?: null;
+            $outOf = $this->assessmentTotalMarks[(int) $a->assessment_id] ?? null;
             if (! $outOf || $a->score === null) {
                 continue;
             }
@@ -298,5 +319,31 @@ class InstitutionLearnerAnalyticsService
         }
 
         return $with ? (int) round(($improving / $with) * 100) : 0;
+    }
+
+    /**
+     * @param  Collection<int, AssessmentAttempt>  $attempts
+     */
+    private function warmAssessmentMarksForAttempts(Collection $attempts): void
+    {
+        $missingIds = $attempts
+            ->pluck('assessment_id')
+            ->filter()
+            ->unique()
+            ->filter(fn ($id) => ! isset($this->assessmentTotalMarks[(int) $id]));
+
+        if ($missingIds->isEmpty()) {
+            return;
+        }
+
+        $totals = DB::table('questions')
+            ->whereIn('assessment_id', $missingIds)
+            ->selectRaw('assessment_id, COALESCE(SUM(marks), 0) as total_marks')
+            ->groupBy('assessment_id')
+            ->pluck('total_marks', 'assessment_id');
+
+        foreach ($missingIds as $assessmentId) {
+            $this->assessmentTotalMarks[(int) $assessmentId] = (int) ($totals[$assessmentId] ?? 0);
+        }
     }
 }

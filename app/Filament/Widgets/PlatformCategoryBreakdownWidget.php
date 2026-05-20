@@ -3,12 +3,14 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\AdminOnlyWidget;
+use App\Filament\Widgets\Concerns\LazyAnalyticsWidget;
 use App\Services\DashboardAnalyticsService;
 use Filament\Widgets\Widget;
 
 class PlatformCategoryBreakdownWidget extends Widget
 {
     use AdminOnlyWidget;
+    use LazyAnalyticsWidget;
 
     protected static ?int $sort = -69;
 

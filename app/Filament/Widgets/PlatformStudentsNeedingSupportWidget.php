@@ -2,27 +2,21 @@
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Widgets\Concerns\AdminOnlyWidget;
 use App\Services\DashboardAnalyticsService;
-use Filament\Widgets\Widget;
+use Filament\Tables\Table;
 
-class PlatformStudentsNeedingSupportWidget extends Widget
+class PlatformStudentsNeedingSupportWidget extends PlatformTopStudentsWidget
 {
-    use AdminOnlyWidget;
-
     protected static ?int $sort = -64;
 
-    protected string $view = 'filament.widgets.platform-students-table';
-
-    protected int | string | array $columnSpan = 1;
-
-    protected function getViewData(): array
+    public function table(Table $table): Table
     {
-        return [
-            'heading' => 'Students needing support',
-            'description' => 'Below 50% average — candidates for intervention.',
-            'students' => app(DashboardAnalyticsService::class)->platformStudentSummaries(15)['support'],
-            'variant' => 'support',
-        ];
+        return $this->studentTable(
+            $table,
+            'Students needing support',
+            'Below 50% average — candidates for intervention.',
+            app(DashboardAnalyticsService::class)->adminAnalytics()['learners_needing_support'] ?? [],
+            'support',
+        );
     }
 }

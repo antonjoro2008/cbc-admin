@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\AdminOnlyWidget;
+use App\Filament\Widgets\Concerns\LazyAnalyticsWidget;
 use App\Models\AssessmentAttempt;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -11,6 +12,7 @@ use Filament\Widgets\TableWidget;
 class PlatformRecentAttemptsWidget extends TableWidget
 {
     use AdminOnlyWidget;
+    use LazyAnalyticsWidget;
 
     protected static ?int $sort = -60;
 

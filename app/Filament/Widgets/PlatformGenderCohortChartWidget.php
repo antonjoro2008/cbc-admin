@@ -3,12 +3,14 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\AdminOnlyWidget;
+use App\Filament\Widgets\Concerns\LazyAnalyticsWidget;
 use App\Services\DashboardAnalyticsService;
 use Filament\Widgets\ChartWidget;
 
 class PlatformGenderCohortChartWidget extends ChartWidget
 {
     use AdminOnlyWidget;
+    use LazyAnalyticsWidget;
 
     protected static ?int $sort = -82;
 

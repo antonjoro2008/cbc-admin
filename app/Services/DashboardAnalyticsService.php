@@ -11,12 +11,49 @@ use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class DashboardAnalyticsService
 {
+    private const CACHE_TTL_SECONDS = 300;
+
+    /** @var array<int, int> */
+    private array $assessmentTotalMarks = [];
+
+    private ?array $adminAnalyticsMemory = null;
+
+    /** @var array<int, array<string, mixed>> */
+    private array $institutionAnalyticsMemory = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private array $inclusionMetricsMemory = [];
+
+    private ?array $platformInstitutionBreakdownMemory = null;
+
+    private ?array $platformClassroomBreakdownMemory = null;
+
     public function __construct(
         private readonly InstitutionLearnerAnalyticsService $cohortAnalytics,
     ) {}
+
+    /**
+     * Clear cached dashboard analytics (e.g. after bulk data imports).
+     */
+    public static function flushCache(?int $institutionId = null): void
+    {
+        Cache::forget('dashboard.analytics.admin');
+
+        if ($institutionId !== null) {
+            Cache::forget("dashboard.analytics.institution.{$institutionId}");
+
+            return;
+        }
+
+        foreach (Institution::pluck('id') as $id) {
+            Cache::forget("dashboard.analytics.institution.{$id}");
+        }
+    }
 
     /**
      * Build role-specific analytics payload for the authenticated user.
@@ -117,6 +154,22 @@ class DashboardAnalyticsService
      * @return array<string, mixed>
      */
     public function institutionAnalyticsById(int $institutionId): array
+    {
+        if (isset($this->institutionAnalyticsMemory[$institutionId])) {
+            return $this->institutionAnalyticsMemory[$institutionId];
+        }
+
+        return $this->institutionAnalyticsMemory[$institutionId] = Cache::remember(
+            "dashboard.analytics.institution.{$institutionId}",
+            self::CACHE_TTL_SECONDS,
+            fn () => $this->computeInstitutionAnalyticsById($institutionId),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function computeInstitutionAnalyticsById(int $institutionId): array
     {
         $cohort = $this->cohortAnalytics->learnerCohortAnalytics($institutionId, null, 1000);
         $extras = $this->cohortAnalytics->institutionAdminExtras($institutionId);
@@ -306,6 +359,22 @@ class DashboardAnalyticsService
      */
     public function adminAnalytics(): array
     {
+        if ($this->adminAnalyticsMemory !== null) {
+            return $this->adminAnalyticsMemory;
+        }
+
+        return $this->adminAnalyticsMemory = Cache::remember(
+            'dashboard.analytics.admin',
+            self::CACHE_TTL_SECONDS,
+            fn () => $this->computeAdminAnalytics(),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function computeAdminAnalytics(): array
+    {
         $since30 = Carbon::now()->subDays(30)->startOfDay();
         $since7 = Carbon::now()->subDays(7)->startOfDay();
 
@@ -328,14 +397,19 @@ class DashboardAnalyticsService
             ->whereNotNull('completed_at')
             ->with(['assessment.subject', 'student'])
             ->orderBy('completed_at', 'desc')
-            ->limit(2000)
+            ->limit(800)
             ->get();
+
+        $this->warmAssessmentMarksForAttempts($attempts);
 
         $attemptPercents = $this->mapAttemptPercents($attempts);
         $inclusion = $this->inclusionMetricsForScope();
         $institutionBreakdown = $this->platformInstitutionBreakdown();
         $subjectPerformance = $this->aggregateSubjectPerformance($attempts);
-        $learnerSummaries = $this->learnerPerformanceSummaries($allStudentIds, $attempts);
+        $learnerSummaries = $this->learnerPerformanceSummaries(
+            $attempts->pluck('student_id')->unique(),
+            $attempts,
+        );
         $classroomBreakdown = $this->platformClassroomBreakdown();
         $categoryStats = $this->platformCategoryBreakdown();
         $categoryStrengths = $this->formatCategoryInsights($this->topCategories($categoryStats, 8, true), 'strength');
@@ -351,32 +425,16 @@ class DashboardAnalyticsService
             : 0.0;
         $totalClassrooms = (int) Classroom::count();
         $learnersImprovingPercent = $this->cohortAnalytics->learnersImprovingPercent(
-            AssessmentAttempt::query()
-                ->whereIn('student_id', $allStudentIds)
-                ->whereNotNull('completed_at')
-                ->with('assessment')
-                ->orderBy('completed_at')
-                ->limit(2000)
-                ->get(),
+            $attempts->sortBy('completed_at')->values(),
         );
         $distinctLearners30d = AssessmentAttempt::query()
             ->whereIn('student_id', $allStudentIds)
             ->whereNotNull('completed_at')
             ->where('completed_at', '>=', $since30)
-            ->pluck('student_id')
-            ->unique()
-            ->count();
+            ->distinct('student_id')
+            ->count('student_id');
 
-        $labels = [];
-        $values = [];
-        for ($i = 13; $i >= 0; $i--) {
-            $day = Carbon::now()->subDays($i)->startOfDay();
-            $labels[] = $day->format('M j');
-            $values[] = (int) AssessmentAttempt::query()
-                ->whereNotNull('completed_at')
-                ->whereBetween('completed_at', [$day, (clone $day)->endOfDay()])
-                ->count();
-        }
+        $activityChart = $this->buildPlatformActivityLast14DaysChart();
 
         $genderCohort = $inclusion['cohort_by_gender'] ?? [];
         $genderPerformance = $inclusion['performance_by_gender'] ?? [];
@@ -425,7 +483,7 @@ class DashboardAnalyticsService
             'learners_needing_support' => array_slice($learnerSummaries['support'], 0, 20),
             'grade_level_distribution' => $this->platformGradeLevelDistribution(),
             'charts' => [
-                'activity_last_14_days' => ['labels' => $labels, 'values' => $values],
+                'activity_last_14_days' => $activityChart,
                 'users_by_type' => [
                     'labels' => ['Students', 'Institutions', 'Teachers', 'Parents', 'Admins'],
                     'values' => [
@@ -472,6 +530,24 @@ class DashboardAnalyticsService
      */
     public function inclusionMetricsForScope(?int $institutionId = null): array
     {
+        $cacheKey = 'institution:'.($institutionId ?? 'platform');
+
+        if (isset($this->inclusionMetricsMemory[$cacheKey])) {
+            return $this->inclusionMetricsMemory[$cacheKey];
+        }
+
+        return $this->inclusionMetricsMemory[$cacheKey] = Cache::remember(
+            "dashboard.analytics.inclusion.{$cacheKey}",
+            self::CACHE_TTL_SECONDS,
+            fn () => $this->computeInclusionMetricsForScope($institutionId),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function computeInclusionMetricsForScope(?int $institutionId): array
+    {
         $students = User::query()
             ->where('user_type', 'student')
             ->when($institutionId !== null, fn ($q) => $q->where('institution_id', $institutionId))
@@ -486,8 +562,10 @@ class DashboardAnalyticsService
             ->whereNotNull('completed_at')
             ->with('assessment')
             ->orderBy('completed_at', 'desc')
-            ->limit(2000)
+            ->limit(500)
             ->get();
+
+        $this->warmAssessmentMarksForAttempts($attempts);
 
         return $this->cohortAnalytics->buildInclusionMetrics($students, $attempts);
     }
@@ -498,6 +576,20 @@ class DashboardAnalyticsService
      * @return list<array<string, mixed>>
      */
     public function platformInstitutionBreakdown(int $limit = 30): array
+    {
+        if ($this->platformInstitutionBreakdownMemory !== null) {
+            return array_slice($this->platformInstitutionBreakdownMemory, 0, $limit);
+        }
+
+        $this->platformInstitutionBreakdownMemory = $this->computePlatformInstitutionBreakdown();
+
+        return array_slice($this->platformInstitutionBreakdownMemory, 0, $limit);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function computePlatformInstitutionBreakdown(): array
     {
         $breakdown = [];
 
@@ -510,9 +602,10 @@ class DashboardAnalyticsService
                 ->whereIn('student_id', $studentIds)
                 ->whereNotNull('completed_at')
                 ->with('assessment')
-                ->limit(500)
+                ->limit(200)
                 ->get();
 
+            $this->warmAssessmentMarksForAttempts($attempts);
             $percents = $this->mapAttemptPercents($attempts);
             $avg = $this->averageFromPercents($percents);
             $withGender = User::whereIn('id', $studentIds)
@@ -539,9 +632,10 @@ class DashboardAnalyticsService
                 ->whereIn('student_id', $individualIds)
                 ->whereNotNull('completed_at')
                 ->with('assessment')
-                ->limit(500)
+                ->limit(200)
                 ->get();
 
+            $this->warmAssessmentMarksForAttempts($attempts);
             $percents = $this->mapAttemptPercents($attempts);
             $avg = $this->averageFromPercents($percents);
             $withGender = User::whereIn('id', $individualIds)
@@ -564,7 +658,7 @@ class DashboardAnalyticsService
 
         usort($breakdown, fn ($a, $b) => $b['average_percent'] <=> $a['average_percent']);
 
-        return array_slice($breakdown, 0, $limit);
+        return $breakdown;
     }
 
     /**
@@ -574,21 +668,12 @@ class DashboardAnalyticsService
      */
     public function platformStudentSummaries(int $limit = 100): array
     {
-        $studentIds = User::where('user_type', 'student')->pluck('id');
-        $attempts = AssessmentAttempt::query()
-            ->whereIn('student_id', $studentIds)
-            ->whereNotNull('completed_at')
-            ->with(['assessment', 'student.institution'])
-            ->orderBy('completed_at', 'desc')
-            ->limit(2000)
-            ->get();
-
-        $summaries = $this->learnerPerformanceSummaries($studentIds, $attempts);
+        $data = $this->adminAnalytics();
 
         return [
-            'all' => array_slice($summaries['all'], 0, $limit),
-            'top' => array_slice($summaries['top'], 0, $limit),
-            'support' => array_slice($summaries['support'], 0, $limit),
+            'all' => array_slice($data['top_performers'], 0, $limit),
+            'top' => array_slice($data['top_performers'], 0, $limit),
+            'support' => array_slice($data['learners_needing_support'], 0, $limit),
         ];
     }
 
@@ -597,17 +682,23 @@ class DashboardAnalyticsService
      *
      * @return array<string, mixed>
      */
-    public function formatInclusionForView(array $inclusion): array
+    public function formatInclusionForView(array $inclusion, bool $hideEmptyCohortRows = true): array
     {
         $cohortRows = [];
         foreach ($inclusion['cohort_by_gender'] ?? [] as $key => $count) {
+            $count = (int) $count;
+            if ($hideEmptyCohortRows && $count === 0) {
+                continue;
+            }
             $cohortRows[] = [
                 'label' => InstitutionLearnerAnalyticsService::genderLabel($key),
                 'key' => $key,
-                'count' => (int) $count,
+                'count' => $count,
                 'color' => InstitutionLearnerAnalyticsService::genderColor($key),
             ];
         }
+
+        usort($cohortRows, fn ($a, $b) => $b['count'] <=> $a['count']);
 
         $performanceRows = [];
         foreach ($inclusion['performance_by_gender'] ?? [] as $key => $row) {
@@ -620,6 +711,8 @@ class DashboardAnalyticsService
                 'color' => InstitutionLearnerAnalyticsService::genderColor($key),
             ];
         }
+
+        usort($performanceRows, fn ($a, $b) => $b['average_percent'] <=> $a['average_percent']);
 
         return [
             'notes' => $inclusion['notes'] ?? [],
@@ -675,6 +768,20 @@ class DashboardAnalyticsService
      */
     public function platformClassroomBreakdown(int $limit = 50): array
     {
+        if ($this->platformClassroomBreakdownMemory !== null) {
+            return array_slice($this->platformClassroomBreakdownMemory, 0, $limit);
+        }
+
+        $this->platformClassroomBreakdownMemory = $this->computePlatformClassroomBreakdown();
+
+        return array_slice($this->platformClassroomBreakdownMemory, 0, $limit);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function computePlatformClassroomBreakdown(): array
+    {
         $breakdown = [];
 
         foreach (Classroom::with('institution:id,name')->orderBy('name')->get() as $classroom) {
@@ -687,9 +794,10 @@ class DashboardAnalyticsService
                 ->whereIn('student_id', $studentIds)
                 ->whereNotNull('completed_at')
                 ->with('assessment')
-                ->limit(300)
+                ->limit(100)
                 ->get();
 
+            $this->warmAssessmentMarksForAttempts($attempts);
             $percents = $this->mapAttemptPercents($attempts);
             $avg = $this->averageFromPercents($percents);
 
@@ -708,24 +816,7 @@ class DashboardAnalyticsService
 
         usort($breakdown, fn ($a, $b) => $b['average_percent'] <=> $a['average_percent']);
 
-        return array_slice($breakdown, 0, $limit);
-    }
-
-    /**
-     * Competency area (category tag) performance across all marked answers platform-wide.
-     *
-     * @return array<string, array<string, mixed>>
-     */
-    public function platformCategoryBreakdown(): array
-    {
-        $markedAnswers = AttemptAnswer::query()
-            ->whereHas('attempt', fn ($q) => $q->whereNotNull('completed_at'))
-            ->whereHas('feedback')
-            ->with(['question'])
-            ->limit(5000)
-            ->get();
-
-        return $this->aggregateCategoryPerformance($markedAnswers);
+        return $breakdown;
     }
 
     /**
@@ -761,12 +852,87 @@ class DashboardAnalyticsService
     // Shared computation helpers
     // -------------------------------------------------------------------------
 
+    public function platformCategoryBreakdown(): array
+    {
+        $markedAnswers = AttemptAnswer::query()
+            ->whereHas('attempt', fn ($q) => $q->whereNotNull('completed_at'))
+            ->whereHas('feedback')
+            ->with(['question:id,category_tag,marks'])
+            ->limit(1500)
+            ->get(['id', 'attempt_id', 'question_id', 'marks_awarded']);
+
+        return $this->aggregateCategoryPerformance($markedAnswers);
+    }
+
+    /**
+     * @return array{labels: list<string>, values: list<int>}
+     */
+    private function buildPlatformActivityLast14DaysChart(): array
+    {
+        $labels = [];
+        $values = [];
+        $indexByDay = [];
+
+        for ($i = 13; $i >= 0; $i--) {
+            $day = Carbon::now()->subDays($i)->startOfDay();
+            $key = $day->format('Y-m-d');
+            $indexByDay[$key] = count($labels);
+            $labels[] = $day->format('M j');
+            $values[] = 0;
+        }
+
+        $since = Carbon::now()->subDays(13)->startOfDay();
+        $counts = AssessmentAttempt::query()
+            ->whereNotNull('completed_at')
+            ->where('completed_at', '>=', $since)
+            ->selectRaw('DATE(completed_at) as activity_day, COUNT(*) as total')
+            ->groupBy('activity_day')
+            ->pluck('total', 'activity_day');
+
+        foreach ($counts as $day => $total) {
+            $key = Carbon::parse($day)->format('Y-m-d');
+            if (isset($indexByDay[$key])) {
+                $values[$indexByDay[$key]] = (int) $total;
+            }
+        }
+
+        return ['labels' => $labels, 'values' => $values];
+    }
+
+    /**
+     * @param  Collection<int, AssessmentAttempt>  $attempts
+     */
+    private function warmAssessmentMarksForAttempts(Collection $attempts): void
+    {
+        $missingIds = $attempts
+            ->pluck('assessment_id')
+            ->filter()
+            ->unique()
+            ->filter(fn ($id) => ! isset($this->assessmentTotalMarks[(int) $id]));
+
+        if ($missingIds->isEmpty()) {
+            return;
+        }
+
+        $totals = DB::table('questions')
+            ->whereIn('assessment_id', $missingIds)
+            ->selectRaw('assessment_id, COALESCE(SUM(marks), 0) as total_marks')
+            ->groupBy('assessment_id')
+            ->pluck('total_marks', 'assessment_id');
+
+        foreach ($missingIds as $assessmentId) {
+            $this->assessmentTotalMarks[(int) $assessmentId] = (int) ($totals[$assessmentId] ?? 0);
+        }
+    }
+
     /**
      * @param  Collection<int, AssessmentAttempt>  $attempts
      * @return list<array{attempt_id: int, completed_at: string|null, percent: float, label: string}>
      */
     private function mapAttemptPercents(Collection $attempts): array
     {
+        $this->warmAssessmentMarksForAttempts($attempts);
+
         $result = [];
         foreach ($attempts as $attempt) {
             $percent = $this->attemptPercent($attempt);
@@ -788,7 +954,12 @@ class DashboardAnalyticsService
 
     private function attemptPercent(AssessmentAttempt $attempt): ?float
     {
-        $outOf = $attempt->assessment?->questions()->sum('marks');
+        $assessmentId = (int) $attempt->assessment_id;
+        if ($assessmentId && ! isset($this->assessmentTotalMarks[$assessmentId])) {
+            $this->warmAssessmentMarksForAttempts(collect([$attempt]));
+        }
+
+        $outOf = $this->assessmentTotalMarks[$assessmentId] ?? null;
         if (! $outOf || $attempt->score === null) {
             return null;
         }
@@ -1079,23 +1250,31 @@ class DashboardAnalyticsService
         }
 
         $summaries = [];
-        foreach ($studentIds as $id) {
-            $student = User::with('institution:id,name')->find($id, [
-                'id', 'name', 'admission_number', 'grade_level', 'classroom_id', 'gender', 'institution_id',
-            ]);
+        $studentIdsWithAttempts = array_keys($byStudent);
+        if ($studentIdsWithAttempts === []) {
+            return ['all' => [], 'top' => [], 'support' => []];
+        }
+
+        $studentsById = User::query()
+            ->with('institution:id,name')
+            ->whereIn('id', $studentIdsWithAttempts)
+            ->get(['id', 'name', 'admission_number', 'grade_level', 'classroom_id', 'gender', 'institution_id'])
+            ->keyBy('id');
+
+        foreach ($studentsById as $id => $student) {
             $row = $byStudent[$id] ?? null;
             $avg = $row ? round(collect($row['percents'])->avg(), 2) : 0.0;
-            $genderKey = ($student?->gender && in_array($student->gender, User::GENDER_VALUES, true))
+            $genderKey = ($student->gender && in_array($student->gender, User::GENDER_VALUES, true))
                 ? $student->gender
                 : 'unspecified';
             $summaries[] = [
                 'student_id' => $id,
-                'name' => $student?->name,
-                'admission_number' => $student?->admission_number,
-                'grade_level' => $student?->grade_level,
+                'name' => $student->name,
+                'admission_number' => $student->admission_number,
+                'grade_level' => $student->grade_level,
                 'gender' => InstitutionLearnerAnalyticsService::genderLabel($genderKey),
                 'gender_key' => $genderKey,
-                'institution_name' => $student?->institution?->name ?? 'Individual',
+                'institution_name' => $student->institution?->name ?? 'Individual',
                 'average_percent' => $avg,
                 'competency_level' => $this->cohortAnalytics->competencyDescriptor($avg),
                 'completed_attempts' => $row['attempts'] ?? 0,
