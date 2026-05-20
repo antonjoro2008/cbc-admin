@@ -10,6 +10,7 @@ use App\Models\PasswordResetCode;
 use App\Models\Setting;
 use App\Services\SmsNotificationService;
 use App\Services\EmailNotificationService;
+use App\Services\DashboardDataService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -17,6 +18,10 @@ use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly DashboardDataService $dashboardData,
+    ) {}
+
     /**
      * Register a new user (student or parent)
      */
@@ -587,147 +592,7 @@ class AuthController extends Controller
      */
     private function getDashboardData($user)
     {
-        // Get assessment statistics
-        $assessmentStats = $this->getAssessmentStats($user);
-
-        // Get recent assessments
-        $recentAssessments = $this->getRecentAssessments($user);
-
-        // Get recent attempts
-        $recentAttempts = $this->getRecentAttempts($user);
-
-        $effectiveWallet = $user->getEffectiveWallet();
-
-        // Get system settings for client calculations
-        $tokensPerShilling = Setting::getValue('tokens_per_shilling', 1.0);
-        $minutesPerToken = Setting::getValue('minutes_per_token', 1.0);
-
-        return [
-            'token_balance' => $effectiveWallet->balance ?? 0,
-            'minutes_balance' => $effectiveWallet->available_minutes ?? 0,
-            'assessment_stats' => $assessmentStats,
-            'recent_assessments' => $recentAssessments,
-            'recent_attempts' => $recentAttempts,
-            'settings' => [
-                'tokens_per_shilling' => $tokensPerShilling,
-                'minutes_per_token' => $minutesPerToken,
-            ],
-        ];
-    }
-
-    /**
-     * Get assessment statistics for a user
-     */
-    private function getAssessmentStats($user)
-    {
-        $attempts = \App\Models\AssessmentAttempt::where('student_id', $user->id);
-
-        $totalAttempts = $attempts->count();
-        $completedAttempts = $attempts->whereNotNull('completed_at')->count();
-        $inProgressAttempts = $attempts->whereNull('completed_at')->count();
-
-        // Calculate average score based on marked questions only
-        $averageScore = $this->calculateAverageScore($user->id);
-
-        $totalTokensUsed = \App\Models\TokenUsage::whereHas('attempt', function ($query) use ($user) {
-            $query->where('student_id', $user->id);
-        })->sum('tokens_used');
-
-        return [
-            'total_attempts' => $totalAttempts,
-            'completed_attempts' => $completedAttempts,
-            'in_progress_attempts' => $inProgressAttempts,
-            'average_score' => round($averageScore),
-            'total_tokens_used' => $totalTokensUsed,
-            'completion_rate' => $totalAttempts > 0 ? round(($completedAttempts / $totalAttempts) * 100, 2) : 0,
-        ];
-    }
-
-    /**
-     * Get recent assessments for a user
-     */
-    private function getRecentAssessments($user)
-    {
-        if ($user->isStudent() || $user->isParent()) {
-            $assessments = \App\Models\Assessment::whereHas('attempts', function ($query) use ($user) {
-                $query->where('student_id', $user->id);
-            })
-                ->orWhere('created_by', $user->id)
-                ->with(['subject', 'creator'])
-                ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get();
-        } elseif ($user->isInstitution()) {
-            $assessments = \App\Models\Assessment::whereHas('creator', function ($query) use ($user) {
-                $query->where('institution_id', $user->institution_id);
-            })
-                ->with(['subject', 'creator'])
-                ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get();
-        } else {
-            $assessments = \App\Models\Assessment::with(['subject', 'creator'])
-                ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get();
-        }
-
-        return $assessments;
-    }
-
-    /**
-     * Get recent attempts for a user
-     */
-    private function getRecentAttempts($user)
-    {
-        if ($user->isStudent()) {
-            $attempts = \App\Models\AssessmentAttempt::where('student_id', $user->id)
-                ->with(['assessment.subject'])
-                ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get();
-        } elseif ($user->isInstitution()) {
-            $attempts = \App\Models\AssessmentAttempt::whereHas('student', function ($query) use ($user) {
-                $query->where('institution_id', $user->institution_id);
-            })
-                ->with(['assessment.subject', 'student'])
-                ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get();
-        } else {
-            $attempts = \App\Models\AssessmentAttempt::with(['assessment.subject', 'student'])
-                ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get();
-        }
-
-        return $attempts;
-    }
-
-    /**
-     * Calculate average score based on marked questions only
-     */
-    private function calculateAverageScore($userId)
-    {
-        // Get all attempt answers that have feedback (meaning they were marked)
-        $markedAttemptAnswers = \App\Models\AttemptAnswer::whereHas('attempt', function ($query) use ($userId) {
-            $query->where('student_id', $userId);
-        })
-            ->whereHas('feedback')
-            ->with(['question', 'feedback']);
-
-        $totalMarksAwarded = $markedAttemptAnswers->sum('marks_awarded');
-
-        // Get total possible marks for questions that were marked
-        $totalPossibleMarks = $markedAttemptAnswers->get()->sum(function ($attemptAnswer) {
-            return $attemptAnswer->question->marks;
-        });
-
-        if ($totalPossibleMarks > 0) {
-            return round(($totalMarksAwarded / $totalPossibleMarks) * 100, 2);
-        }
-
-        return 0;
+        return $this->dashboardData->buildPayload($user, includeSettings: true);
     }
 
     /**

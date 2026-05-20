@@ -18,6 +18,10 @@ class AppDashboard extends FilamentDashboard
             return 'Overview — '.$name;
         }
 
+        if ($user instanceof User && $user->isAdmin()) {
+            return 'Platform analytics — all students & schools';
+        }
+
         return parent::getTitle();
     }
 

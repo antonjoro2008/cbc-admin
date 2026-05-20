@@ -2,31 +2,34 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\AdminOnlyWidget;
 use App\Models\Payment;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Carbon;
 
 class RevenueByMonth extends ChartWidget
 {
+    use AdminOnlyWidget;
+
+    protected static ?int $sort = -50;
+
     protected ?string $heading = 'Revenue By Month';
-    
+
     protected int | string | array $columnSpan = 'full';
 
     protected function getData(): array
     {
         $months = collect();
         $revenue = collect();
-        
-        // Get data for the last 12 months
+
         for ($i = 11; $i >= 0; $i--) {
             $date = now()->subMonths($i);
             $monthName = $date->format('M Y');
-            
+
             $monthlyRevenue = Payment::where('status', 'successful')
                 ->whereYear('created_at', $date->year)
                 ->whereMonth('created_at', $date->month)
                 ->sum('amount');
-            
+
             $months->push($monthName);
             $revenue->push($monthlyRevenue);
         }

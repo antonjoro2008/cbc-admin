@@ -1,13 +1,14 @@
 @php
     $gr = $gender_reporting ?? [];
+    $scopeLabel = $scope_label ?? 'platform';
 @endphp
 
 <x-filament-widgets::widget>
     <x-filament::section
         icon="heroicon-o-chart-pie"
         icon-color="info"
-        heading="Inclusion & equity snapshot"
-        description="Roster counts by recorded gender, reporting coverage, and average outcomes where there are completed attempts (CBC / CBE reporting view)."
+        :heading="$heading ?? 'Inclusion & equity snapshot'"
+        :description="$description ?? 'Roster counts by recorded gender, reporting coverage, and average outcomes where there are completed attempts (CBC / CBE reporting view).'"
     >
         <div class="grid gap-6 lg:grid-cols-3">
             <div
@@ -35,8 +36,10 @@
                 class="rounded-xl bg-white p-0 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 lg:col-span-2"
             >
                 <div class="border-b border-gray-100 px-4 py-3 dark:border-white/10">
-                    <p class="text-sm font-semibold text-gray-950 dark:text-white">Learners on roster by recorded gender</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Counts reflect your current learner accounts.</p>
+                    <p class="text-sm font-semibold text-gray-950 dark:text-white">Learners by recorded gender</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ $scopeLabel === 'platform' ? 'All students across the platform.' : 'Learners at your institution.' }}
+                    </p>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
@@ -44,6 +47,9 @@
                             <tr>
                                 <th class="px-4 py-2 font-medium">Category</th>
                                 <th class="px-4 py-2 font-medium text-end">Learners</th>
+                                @if (! empty($show_color_legend))
+                                    <th class="px-4 py-2 font-medium">Chart</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-white/10">
@@ -53,10 +59,18 @@
                                     <td class="px-4 py-2.5 text-end tabular-nums font-medium text-gray-950 dark:text-white">
                                         {{ $row['count'] }}
                                     </td>
+                                    @if (! empty($show_color_legend))
+                                        <td class="px-4 py-2.5">
+                                            <span
+                                                class="inline-block h-3 w-8 rounded"
+                                                style="background-color: {{ $row['color'] ?? '#94A3B8' }}"
+                                            ></span>
+                                        </td>
+                                    @endif
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="2" class="px-4 py-6 text-center text-gray-500">No roster data.</td>
+                                    <td colspan="3" class="px-4 py-6 text-center text-gray-500">No roster data.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -70,7 +84,7 @@
                 class="mt-6 rounded-xl bg-white p-0 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10"
             >
                 <div class="border-b border-gray-100 px-4 py-3 dark:border-white/10">
-                    <p class="text-sm font-semibold text-gray-950 dark:text-white">Average outcome by segment</p>
+                    <p class="text-sm font-semibold text-gray-950 dark:text-white">Average outcome by gender segment</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                         Based on completed attempts only; percentages are score as a share of total marks.
                     </p>
@@ -88,7 +102,15 @@
                         <tbody class="divide-y divide-gray-100 dark:divide-white/10">
                             @foreach ($performance_rows as $row)
                                 <tr class="text-gray-700 dark:text-gray-200">
-                                    <td class="px-4 py-2.5">{{ $row['label'] }}</td>
+                                    <td class="px-4 py-2.5">
+                                        <span class="inline-flex items-center gap-2">
+                                            <span
+                                                class="inline-block h-2.5 w-2.5 rounded-full"
+                                                style="background-color: {{ $row['color'] ?? '#94A3B8' }}"
+                                            ></span>
+                                            {{ $row['label'] }}
+                                        </span>
+                                    </td>
                                     <td class="px-4 py-2.5 text-end tabular-nums font-medium text-gray-950 dark:text-white">
                                         {{ number_format($row['average_percent'], 1) }}%
                                     </td>

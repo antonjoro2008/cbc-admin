@@ -149,6 +149,19 @@ class InstitutionLearnerAnalyticsService
         };
     }
 
+    public static function genderColor(string $key): string
+    {
+        return match ($key) {
+            'female' => '#EC4899',
+            'male' => '#3B82F6',
+            'non_binary' => '#8B5CF6',
+            'prefer_not_to_say' => '#6B7280',
+            'other' => '#F59E0B',
+            'unspecified' => '#D1D5DB',
+            default => '#94A3B8',
+        };
+    }
+
     /**
      * Roster counts, gender reporting coverage, and average outcomes by gender bucket (assessment attempts).
      */

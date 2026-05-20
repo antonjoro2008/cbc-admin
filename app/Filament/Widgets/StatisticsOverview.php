@@ -2,118 +2,80 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Assessment;
-use App\Models\AssessmentAttempt;
-use App\Models\Institution;
-use App\Models\Payment;
-use App\Models\Question;
-use App\Models\User;
-use App\Models\Wallet;
+use App\Filament\Widgets\Concerns\AdminOnlyWidget;
+use App\Services\DashboardAnalyticsService;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class StatisticsOverview extends StatsOverviewWidget
 {
-    public static function canView(): bool
-    {
-        $user = Auth::user();
+    use AdminOnlyWidget;
 
-        return $user instanceof User && $user->isAdmin();
+    protected static ?int $sort = -95;
+
+    protected int | string | array $columnSpan = 'full';
+
+    protected function getHeading(): ?string
+    {
+        return 'Platform overview';
+    }
+
+    protected function getDescription(): ?string
+    {
+        return 'Key metrics across all users, schools, students, and assessments.';
     }
 
     protected function getStats(): array
     {
-        return [
-            // User Statistics
-            Stat::make('Total Users', User::count())
-                ->description('All registered users')
-                ->descriptionIcon('heroicon-m-users')
-                ->color('success'),
+        $data = app(DashboardAnalyticsService::class)->adminAnalytics();
+        $overview = $data['overview'];
+        $inclusion = $data['inclusion_metrics']['gender_reporting'] ?? [];
 
-            Stat::make('Total Institutions', Institution::count())
-                ->description('Educational institutions')
+        return [
+            Stat::make('Total students', (string) $overview['total_students'])
+                ->description($overview['institution_students'].' in schools · '.$overview['individual_students'].' individual')
+                ->descriptionIcon('heroicon-m-academic-cap')
+                ->color('primary'),
+
+            Stat::make('Schools / institutions', (string) $overview['total_institutions'])
+                ->description(($overview['total_classrooms'] ?? 0).' classrooms platform-wide')
                 ->descriptionIcon('heroicon-m-building-office-2')
                 ->color('info'),
 
-            // Assessment Statistics
-            Stat::make('Total Assessments', Assessment::count())
-                ->description('Created assessments')
-                ->descriptionIcon('heroicon-m-document-text')
-                ->color('warning'),
-
-            Stat::make('Total Questions', Question::count())
-                ->description('Assessment questions')
-                ->descriptionIcon('heroicon-m-question-mark-circle')
-                ->color('primary'),
-
-            Stat::make('Assessment Attempts', AssessmentAttempt::count())
-                ->description('Student attempts')
-                ->descriptionIcon('heroicon-m-academic-cap')
-                ->color('success'),
-
-            // Payment Statistics
-            Stat::make('Total Payments', Payment::count())
-                ->description('All payment transactions')
-                ->descriptionIcon('heroicon-m-credit-card')
-                ->color('success'),
-
-            Stat::make('Successful Payments', Payment::where('status', 'successful')->count())
-                ->description('Completed transactions')
-                ->descriptionIcon('heroicon-m-check-circle')
-                ->color('success'),
-
-            Stat::make('Pending Payments', Payment::where('status', 'pending')->count())
-                ->description('Awaiting confirmation')
-                ->descriptionIcon('heroicon-m-clock')
-                ->color('warning'),
-
-            Stat::make('Total Revenue', $this->getTotalRevenue())
-                ->description('From successful payments')
-                ->descriptionIcon('heroicon-m-currency-dollar')
-                ->color('success'),
-
-            // Performance Statistics
-            Stat::make('Average Score', $this->getAverageScore())
-                ->description('Across all attempts')
+            Stat::make('Platform average', $overview['platform_average_percent'].'%')
+                ->description($overview['platform_competency_level'])
                 ->descriptionIcon('heroicon-m-chart-bar')
+                ->color('warning'),
+
+            Stat::make('Learners trending up', ($overview['learners_improving_percent'] ?? 0).'%')
+                ->description('Share with multiple attempts whose latest score improved')
+                ->descriptionIcon('heroicon-m-arrow-trending-up')
+                ->color('success'),
+
+            Stat::make('Completed attempts', (string) $overview['total_completed_attempts'])
+                ->description($overview['attempts_last_30_days'].' in 30 days · '.($overview['distinct_learners_active_last_30_days'] ?? 0).' active learners')
+                ->descriptionIcon('heroicon-m-check-badge')
+                ->color('success'),
+
+            Stat::make('Guardian email coverage', ($overview['guardian_email_coverage_percent'] ?? 0).'%')
+                ->description(($overview['learners_with_guardian_email'] ?? 0).' learners with guardian email on file')
+                ->descriptionIcon('heroicon-m-envelope')
                 ->color('info'),
 
-            // Recent Activity
-            Stat::make('Recent Assessments', Assessment::where('created_at', '>=', now()->subDays(30))->count())
-                ->description('Last 30 days')
-                ->descriptionIcon('heroicon-m-calendar')
-                ->color('warning'),
+            Stat::make('Teachers', (string) $overview['total_teachers'])
+                ->description($overview['total_parents'].' parents registered')
+                ->descriptionIcon('heroicon-m-user-group')
+                ->color('gray'),
 
-            Stat::make('Recent Attempts', AssessmentAttempt::where('created_at', '>=', now()->subDays(7))->count())
-                ->description('Last 7 days')
-                ->descriptionIcon('heroicon-m-fire')
+            Stat::make('Gender data coverage', ($inclusion['reporting_rate_percent'] ?? 0).'%')
+                ->description(($inclusion['learners_with_gender'] ?? 0).' learners with gender recorded')
+                ->descriptionIcon('heroicon-m-identification')
                 ->color('danger'),
+
+            Stat::make('Total revenue', 'KES '.number_format($overview['total_revenue_kes'], 2))
+                ->description($overview['successful_payments'].' successful payments')
+                ->descriptionIcon('heroicon-m-currency-dollar')
+                ->color('success'),
         ];
-    }
-
-    /**
-     * Get total revenue from successful payments
-     */
-    private function getTotalRevenue(): string
-    {
-        $total = Payment::where('status', 'successful')->sum('amount');
-        return 'KES ' . number_format($total, 2);
-    }
-
-    /**
-     * Get average score across all completed attempts
-     */
-    private function getAverageScore(): string
-    {
-        $averageScore = AssessmentAttempt::whereNotNull('score')
-            ->avg('score');
-
-        if ($averageScore) {
-            return round($averageScore, 1) . '%';
-        }
-
-        return 'N/A';
     }
 }
