@@ -18,7 +18,6 @@ class SchoolActionItemsWidget extends Widget
         return [
             'heading' => 'Recommended actions',
             'action_items' => $this->schoolAnalytics()['action_items'] ?? [],
-            'bare' => true,
         ];
     }
 }
