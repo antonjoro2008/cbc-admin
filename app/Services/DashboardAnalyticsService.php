@@ -1469,7 +1469,7 @@ class DashboardAnalyticsService
     {
         $grouped = [];
         foreach ($answers as $answer) {
-            $tag = $answer->question?->category_tag ?: 'Uncategorized';
+            $tag = $answer->question?->category_tag ?: 'General';
             if (! isset($grouped[$tag])) {
                 $grouped[$tag] = ['marks_awarded' => 0, 'marks_possible' => 0, 'count' => 0];
             }
