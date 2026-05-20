@@ -591,7 +591,7 @@ class DashboardAnalyticsService
                 'user_growth_over_time' => $this->buildUserGrowthChart(),
                 'tokens_purchased_vs_used' => $this->buildTokensPurchasedVsUsedChart(),
                 'users_by_type' => [
-                    'labels' => ['Students', 'Institutions', 'Teachers', 'Parents', 'Admins'],
+                    'labels' => ['Learners', 'Institutions', 'Teachers', 'Parents', 'Admins'],
                     'values' => [
                         $studentCount,
                         User::where('user_type', 'institution')->count(),

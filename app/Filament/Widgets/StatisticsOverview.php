@@ -22,7 +22,7 @@ class StatisticsOverview extends StatsOverviewWidget
 
     protected function getDescription(): ?string
     {
-        return 'Key metrics across all users, schools, students, and assessments.';
+        return 'Key metrics across all users, schools, learners, and assessments.';
     }
 
     protected function getStats(): array
@@ -32,10 +32,15 @@ class StatisticsOverview extends StatsOverviewWidget
         $inclusion = $data['inclusion_metrics']['gender_reporting'] ?? [];
 
         return [
-            Stat::make('Total students', (string) $overview['total_students'])
+            Stat::make('Total learners', (string) $overview['total_students'])
                 ->description($overview['institution_students'].' in schools · '.$overview['individual_students'].' individual')
                 ->descriptionIcon('heroicon-m-academic-cap')
                 ->color('primary'),
+
+            Stat::make('Total parents', (string) $overview['total_parents'])
+                ->description('Registered parent accounts')
+                ->descriptionIcon('heroicon-m-users')
+                ->color('secondary'),
 
             Stat::make('Schools / institutions', (string) $overview['total_institutions'])
                 ->description(($overview['total_classrooms'] ?? 0).' classrooms platform-wide')
@@ -63,7 +68,7 @@ class StatisticsOverview extends StatsOverviewWidget
                 ->color('info'),
 
             Stat::make('Teachers', (string) $overview['total_teachers'])
-                ->description($overview['total_parents'].' parents registered')
+                ->description('Teaching staff on the platform')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('gray'),
 

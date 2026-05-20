@@ -19,7 +19,7 @@ class AppDashboard extends FilamentDashboard
         }
 
         if ($user instanceof User && $user->isAdmin()) {
-            return 'Platform analytics — all students & schools';
+            return 'Platform analytics — all learners & schools';
         }
 
         return parent::getTitle();
