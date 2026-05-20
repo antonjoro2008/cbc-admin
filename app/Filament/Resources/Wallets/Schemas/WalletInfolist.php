@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Wallets\Schemas;
 
 use Filament\Schemas\Components\Section;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
@@ -26,7 +27,7 @@ class WalletInfolist
                             ->schema([
                                 TextEntry::make('currency')
                                     ->label('Currency'),
-                                TextEntry::make('is_active')
+                                IconEntry::make('is_active')
                                     ->label('Active')
                                     ->boolean(),
                             ]),

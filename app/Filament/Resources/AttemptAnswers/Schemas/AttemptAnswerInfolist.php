@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AttemptAnswers\Schemas;
 
 use Filament\Schemas\Components\Section;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
@@ -33,10 +34,10 @@ class AttemptAnswerInfolist
                             ->label('Explanation'),
                         Grid::make(2)
                             ->schema([
-                                TextEntry::make('is_correct')
+                                IconEntry::make('is_correct')
                                     ->label('Correct Answer')
                                     ->boolean(),
-                                TextEntry::make('is_active')
+                                IconEntry::make('is_active')
                                     ->label('Active')
                                     ->boolean(),
                             ]),
