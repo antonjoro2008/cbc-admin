@@ -7,7 +7,10 @@ use Livewire\Attributes\Reactive;
 
 trait ResolvesSchoolAnalytics
 {
-    protected static bool $isDiscovered = false;
+    public static function isDiscovered(): bool
+    {
+        return false;
+    }
 
     #[Reactive]
     public ?int $institutionId = null;
