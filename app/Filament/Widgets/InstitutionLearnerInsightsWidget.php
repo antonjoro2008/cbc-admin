@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\User;
+use App\Services\DashboardAnalyticsService;
 use App\Services\InstitutionLearnerAnalyticsService;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -35,10 +36,11 @@ class InstitutionLearnerInsightsWidget extends StatsOverviewWidget
     {
         /** @var User $user */
         $user = Auth::user();
+        $analytics = app(DashboardAnalyticsService::class)->institutionAnalytics($user);
         $service = app(InstitutionLearnerAnalyticsService::class);
         $cohort = $service->learnerCohortAnalytics((int) $user->institution_id, null, 800);
         $extras = $service->institutionAdminExtras((int) $user->institution_id);
-        $summary = $extras['summary'];
+        $summary = array_merge($extras['summary'], $analytics['summary'] ?? []);
         $insights = $cohort['insights'];
         $reporting = $cohort['inclusion_metrics']['gender_reporting'];
 
@@ -62,6 +64,16 @@ class InstitutionLearnerInsightsWidget extends StatsOverviewWidget
                 ->description($insights['average_level'])
                 ->descriptionIcon('heroicon-m-chart-bar')
                 ->color('warning'),
+
+            Stat::make('Assessments completed', (string) ($summary['total_completed_attempts'] ?? 0))
+                ->description('All-time completed attempts at this school')
+                ->descriptionIcon('heroicon-m-clipboard-document-check')
+                ->color('success'),
+
+            Stat::make('Completion rate', ($summary['completion_rate_percent'] ?? 0).'%')
+                ->description('Share of all attempts that were completed')
+                ->descriptionIcon('heroicon-m-arrow-path')
+                ->color('info'),
 
             Stat::make('Learners trending up', $insights['learners_improving_percent'].'%')
                 ->description('Share of learners with multiple attempts whose latest raw score improved')

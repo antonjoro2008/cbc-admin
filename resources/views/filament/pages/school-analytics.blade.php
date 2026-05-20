@@ -157,6 +157,27 @@
             </x-filament::section>
         @endif
 
+        @if (! empty($a['assessment_usage']))
+            <x-filament::section
+                heading="Assessment usage"
+                description="How assessments are used at this school."
+                icon="heroicon-o-clipboard-document-list"
+                icon-color="info"
+                class="mb-6"
+            >
+                @include('filament.partials.analytics-table', [
+                    'columns' => [
+                        ['key' => 'assessment_name', 'label' => 'Assessment', 'emphasis' => true],
+                        ['key' => 'total_attempts', 'label' => 'Attempts', 'align' => 'end'],
+                        ['key' => 'completed_attempts', 'label' => 'Completed', 'align' => 'end'],
+                        ['key' => 'average_score_percent', 'label' => 'Avg %', 'align' => 'end', 'format' => $percentCol],
+                    ],
+                    'rows' => $a['assessment_usage'],
+                    'empty' => 'No assessment activity yet.',
+                ])
+            </x-filament::section>
+        @endif
+
         {{-- One learners table: roster + status (replaces top/support/inactive duplicates) --}}
         <x-filament::section
             heading="Learners"

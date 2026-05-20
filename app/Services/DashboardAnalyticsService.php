@@ -8,6 +8,8 @@ use App\Models\AttemptAnswer;
 use App\Models\Classroom;
 use App\Models\Institution;
 use App\Models\Payment;
+use App\Models\TokenTransaction;
+use App\Models\TokenUsage;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -101,6 +103,8 @@ class DashboardAnalyticsService
 
         $trend = $this->calculateImprovementTrend($attemptPercents);
         $competencyDistribution = $this->competencyDistribution($attemptPercents);
+        $wallet = $student->getEffectiveWallet();
+        $historyAttempts = $attempts->sortByDesc('completed_at')->take(20);
 
         return [
             'profile' => [
@@ -111,18 +115,32 @@ class DashboardAnalyticsService
                 'is_individual' => $student->institution_id === null,
             ],
             'overview' => [
+                'token_balance' => (float) ($wallet->balance ?? 0),
+                'minutes_balance' => (float) ($wallet->available_minutes ?? 0),
                 'average_percent' => $averagePercent,
                 'competency_level' => $this->cohortAnalytics->competencyDescriptor($averagePercent),
                 'total_completed_attempts' => $attempts->count(),
+                'total_assessments_taken' => $attempts->count(),
+                'progress_counter' => [
+                    'completed' => $attempts->count(),
+                    'label' => $attempts->count().' assessments completed',
+                ],
                 'distinct_assessments' => $attempts->pluck('assessment_id')->unique()->count(),
                 'improvement_trend' => $trend['direction'],
                 'improvement_delta_percent' => $trend['delta'],
                 'last_activity_at' => $attempts->last()?->completed_at?->toIso8601String(),
                 'active_days_last_30' => $this->distinctActiveDays($attempts, 30),
             ],
+            'assessment_history' => $historyAttempts->map(fn (AssessmentAttempt $attempt) => [
+                'assessment_name' => $attempt->assessment?->title ?? 'Assessment',
+                'score_percent' => $this->attemptPercent($attempt),
+                'date_taken' => $attempt->completed_at?->toIso8601String(),
+                'subject' => $attempt->assessment?->subject?->name,
+            ])->values()->all(),
             'competency_distribution' => $competencyDistribution,
             'charts' => [
                 'performance_over_time' => $this->performanceOverTimeChart($attemptPercents),
+                'score_trend_last_10' => $this->performanceOverTimeChart(array_slice($attemptPercents, -10)),
                 'activity_last_14_days' => $this->activityChartForStudent($student->id),
                 'subject_performance' => $this->barChartFromStats($subjectStats),
                 'category_performance' => $this->barChartFromStats($categoryStats),
@@ -131,7 +149,7 @@ class DashboardAnalyticsService
             'areas_for_improvement' => $weaknessesFormatted,
             'subject_breakdown' => array_values($subjectStats),
             'category_breakdown' => array_values($categoryStats),
-            'recent_performance' => $this->recentAttemptSummaries($attempts->sortByDesc('completed_at')->take(10)),
+            'recent_performance' => $this->recentAttemptSummaries($historyAttempts),
             'action_items' => $this->studentActionItems($weaknessesFormatted, $subjectStats, $trend, $attempts),
         ];
     }
@@ -202,10 +220,20 @@ class DashboardAnalyticsService
         $categoryStats = $this->aggregateCategoryPerformance($markedAnswers);
         $categoryStrengths = $this->formatCategoryInsights($this->topCategories($categoryStats, 5, true), 'strength');
         $categoryWeaknesses = $this->formatCategoryInsights($this->topCategories($categoryStats, 5, false), 'improvement');
+        $totalAttempts = AssessmentAttempt::whereIn('student_id', $studentIds)->count();
+        $completedCount = $attempts->count();
+        $completionRate = $totalAttempts > 0
+            ? round(($completedCount / $totalAttempts) * 100, 1)
+            : 0.0;
 
         return [
             'institution' => Institution::find($institutionId, ['id', 'name', 'motto', 'theme_color']),
-            'summary' => $extras['summary'],
+            'summary' => array_merge($extras['summary'], [
+                'total_completed_attempts' => $completedCount,
+                'total_attempts' => $totalAttempts,
+                'completion_rate_percent' => $completionRate,
+                'average_school_score_percent' => $cohort['insights']['average_percent'] ?? 0,
+            ]),
             'insights' => $cohort['insights'],
             'inclusion_metrics' => $cohort['inclusion_metrics'],
             'competency_distribution' => $this->competencyDistribution($attemptPercents),
@@ -232,6 +260,7 @@ class DashboardAnalyticsService
             'learners_needing_support' => array_slice($learnerSummaries['support'], 0, 10),
             'student_roster' => $this->institutionStudentRoster($studentIds, $attempts),
             'subject_breakdown' => array_values($subjectPerformance),
+            'assessment_usage' => $this->assessmentUsageForStudentIds($studentIds),
             'inactive_learners' => $inactiveLearners,
             'recent_activity' => $this->recentAttemptSummaries($attempts->take(15)),
             'action_items' => $this->institutionActionItems(
@@ -287,6 +316,15 @@ class DashboardAnalyticsService
         $subjectStats = $this->aggregateSubjectPerformance($attempts);
         $learnerSummaries = $this->learnerPerformanceSummaries($studentIds, $attempts);
         $classroom = Classroom::with('teacher')->find($teacher->classroom_id);
+        $totalAttempts = AssessmentAttempt::whereIn('student_id', $studentIds)->count();
+        $completedCount = $attempts->count();
+        $completionRate = $totalAttempts > 0
+            ? round(($completedCount / $totalAttempts) * 100, 1)
+            : 0.0;
+        $rankedLearners = collect($learnerSummaries['all'])
+            ->sortByDesc('average_percent')
+            ->values()
+            ->all();
 
         return [
             'classroom' => [
@@ -294,6 +332,14 @@ class DashboardAnalyticsService
                 'name' => $classroom?->name,
                 'grade_level' => $classroom?->grade_level,
                 'student_count' => $cohort['students']->count(),
+                'learners_in_class' => $cohort['students']->count(),
+            ],
+            'overview' => [
+                'learners_in_class' => $cohort['students']->count(),
+                'class_average_score_percent' => $cohort['insights']['average_percent'] ?? 0,
+                'class_average_level' => $cohort['insights']['average_level'] ?? '—',
+                'completion_rate_percent' => $completionRate,
+                'total_completed_attempts' => $completedCount,
             ],
             'students' => $cohort['students'],
             'insights' => $cohort['insights'],
@@ -301,9 +347,18 @@ class DashboardAnalyticsService
             'competency_distribution' => $this->competencyDistribution($this->mapAttemptPercents($attempts)),
             'charts' => [
                 'activity_last_14_days' => $this->activityChartForStudents($studentIds->all()),
+                'learner_ranking' => [
+                    'labels' => array_column($rankedLearners, 'name'),
+                    'values' => array_column($rankedLearners, 'average_percent'),
+                ],
                 'subject_performance' => $this->barChartFromStats($subjectStats),
                 'category_performance' => $this->barChartFromStats($categoryStats),
             ],
+            'learner_performance_table' => array_map(fn (array $row): array => [
+                'name' => $row['name'],
+                'average_score_percent' => $row['average_percent'],
+                'assessments_completed' => $row['completed_attempts'],
+            ], $rankedLearners),
             'class_strengths' => $this->formatCategoryInsights($this->topCategories($categoryStats, 5, true), 'strength'),
             'class_weaknesses' => $this->formatCategoryInsights($this->topCategories($categoryStats, 5, false), 'improvement'),
             'subject_breakdown' => array_values($subjectStats),
@@ -436,6 +491,7 @@ class DashboardAnalyticsService
             ->count('student_id');
 
         $activityChart = $this->buildPlatformActivityLast14DaysChart();
+        $operations = $this->platformOperationsMetrics();
 
         $genderCohort = $inclusion['cohort_by_gender'] ?? [];
         $genderPerformance = $inclusion['performance_by_gender'] ?? [];
@@ -466,6 +522,13 @@ class DashboardAnalyticsService
                 'learners_with_guardian_email' => $withGuardianEmail,
                 'total_classrooms' => $totalClassrooms,
                 'distinct_learners_active_last_30_days' => $distinctLearners30d,
+                'total_admins' => User::where('user_type', 'admin')->count(),
+                'total_tokens_purchased' => $operations['total_tokens_purchased'],
+                'total_tokens_used' => $operations['total_tokens_used'],
+                'mpesa_payment_success_count' => $operations['mpesa_payment_success_count'],
+                'mpesa_payment_failure_count' => $operations['mpesa_payment_failure_count'],
+                'system_status' => $operations['system_status'],
+                'system_status_label' => $operations['system_status_label'],
             ],
             'insights' => [
                 'average_percent' => $this->averageFromPercents($attemptPercents),
@@ -485,6 +548,9 @@ class DashboardAnalyticsService
             'grade_level_distribution' => $this->platformGradeLevelDistribution(),
             'charts' => [
                 'activity_last_14_days' => $activityChart,
+                'assessments_completed_per_period' => $activityChart,
+                'user_growth_over_time' => $this->buildUserGrowthChart(),
+                'tokens_purchased_vs_used' => $this->buildTokensPurchasedVsUsedChart(),
                 'users_by_type' => [
                     'labels' => ['Students', 'Institutions', 'Teachers', 'Parents', 'Admins'],
                     'values' => [
@@ -520,8 +586,252 @@ class DashboardAnalyticsService
                 ],
             ],
             'recent_activity' => $this->recentAttemptSummaries($attempts->take(20)),
+            'assessment_usage_by_school' => $this->platformAssessmentUsageBySchool(),
             'action_items' => $this->adminActionItems($attempts30d, $studentCount, $inclusion),
         ];
+    }
+
+    /**
+     * Per-assessment analytics (assessment dashboard).
+     *
+     * @return array<string, mixed>
+     */
+    public function assessmentAnalyticsById(int $assessmentId): array
+    {
+        $assessment = Assessment::with('subject')->findOrFail($assessmentId);
+
+        $attempts = AssessmentAttempt::query()
+            ->where('assessment_id', $assessmentId)
+            ->with('assessment')
+            ->get();
+
+        $this->warmAssessmentMarksForAttempts($attempts);
+
+        $totalAttempts = $attempts->count();
+        $completed = $attempts->whereNotNull('completed_at');
+        $completedCount = $completed->count();
+        $inProgress = $totalAttempts - $completedCount;
+
+        $percents = [];
+        $passCount = 0;
+        foreach ($completed as $attempt) {
+            $pct = $this->attemptPercent($attempt);
+            if ($pct === null) {
+                continue;
+            }
+            $percents[] = $pct;
+            if ($pct >= 50) {
+                $passCount++;
+            }
+        }
+
+        $avgPercent = $percents !== [] ? round(collect($percents)->avg(), 2) : 0.0;
+        $failCount = count($percents) - $passCount;
+        $completionRate = $totalAttempts > 0
+            ? round(($completedCount / $totalAttempts) * 100, 1)
+            : 0.0;
+
+        return [
+            'assessment' => [
+                'id' => $assessment->id,
+                'name' => $assessment->title,
+                'title' => $assessment->title,
+                'subject' => $assessment->subject?->name,
+                'status' => $assessment->status,
+            ],
+            'overview' => [
+                'total_attempts' => $totalAttempts,
+                'completed_attempts' => $completedCount,
+                'in_progress_attempts' => $inProgress,
+                'average_score_percent' => $avgPercent,
+                'completion_rate_percent' => $completionRate,
+                'pass_count' => $passCount,
+                'fail_count' => $failCount,
+                'difficulty_label' => $this->assessmentDifficultyLabel($avgPercent, $completionRate),
+            ],
+            'charts' => [
+                'pass_vs_fail' => [
+                    'labels' => ['Pass (≥50%)', 'Fail (<50%)'],
+                    'values' => [$passCount, max(0, $failCount)],
+                ],
+                'completion_vs_dropout' => [
+                    'labels' => ['Completed', 'In progress / dropped'],
+                    'values' => [$completedCount, $inProgress],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Platform operations: tokens, M-PESA, system health.
+     *
+     * @return array<string, mixed>
+     */
+    public function platformOperationsMetrics(): array
+    {
+        $tokensPurchased = (float) TokenTransaction::query()
+            ->where('transaction_type', 'credit')
+            ->sum('tokens');
+
+        if ($tokensPurchased <= 0) {
+            $tokensPurchased = (float) Payment::query()
+                ->where('status', 'successful')
+                ->sum('tokens');
+        }
+
+        $tokensUsed = (float) TokenUsage::query()->sum('tokens_used');
+
+        $status = $this->resolveSystemStatus();
+
+        return [
+            'total_tokens_purchased' => round($tokensPurchased, 2),
+            'total_tokens_used' => round($tokensUsed, 2),
+            'mpesa_payment_success_count' => Payment::query()
+                ->where('channel', 'mpesa')
+                ->where('status', 'successful')
+                ->count(),
+            'mpesa_payment_failure_count' => Payment::query()
+                ->where('channel', 'mpesa')
+                ->where('status', 'failed')
+                ->count(),
+            'system_status' => $status['status'],
+            'system_status_label' => $status['label'],
+        ];
+    }
+
+    /**
+     * Assessment attempt counts grouped by assessment for a cohort of students.
+     *
+     * @param  Collection<int, int|string>|\Illuminate\Support\Collection<int, int|string>  $studentIds
+     * @return list<array<string, mixed>>
+     */
+    public function assessmentUsageForStudentIds($studentIds): array
+    {
+        $studentIds = collect($studentIds)->filter()->unique();
+        if ($studentIds->isEmpty()) {
+            return [];
+        }
+
+        $rows = AssessmentAttempt::query()
+            ->whereIn('student_id', $studentIds)
+            ->with('assessment:id,title')
+            ->get()
+            ->groupBy('assessment_id');
+
+        $usage = [];
+        foreach ($rows as $assessmentId => $group) {
+            $completed = $group->whereNotNull('completed_at');
+            $percents = [];
+            foreach ($completed as $attempt) {
+                $p = $this->attemptPercent($attempt);
+                if ($p !== null) {
+                    $percents[] = $p;
+                }
+            }
+
+            $usage[] = [
+                'assessment_id' => (int) $assessmentId,
+                'assessment_name' => $group->first()->assessment?->title ?? 'Assessment',
+                'total_attempts' => $group->count(),
+                'completed_attempts' => $completed->count(),
+                'average_score_percent' => $percents !== [] ? round(collect($percents)->avg(), 2) : null,
+            ];
+        }
+
+        usort($usage, fn ($a, $b) => $b['completed_attempts'] <=> $a['completed_attempts']);
+
+        return $usage;
+    }
+
+    /**
+     * Assessment usage summary per school (platform master view).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function platformAssessmentUsageBySchool(): array
+    {
+        $table = [];
+        foreach (Institution::orderBy('name')->get(['id', 'name']) as $institution) {
+            $studentIds = User::query()
+                ->where('institution_id', $institution->id)
+                ->where('user_type', 'student')
+                ->pluck('id');
+
+            $usage = $this->assessmentUsageForStudentIds($studentIds);
+            $table[] = [
+                'school_id' => $institution->id,
+                'school_name' => $institution->name,
+                'distinct_assessments_used' => count($usage),
+                'total_completed_attempts' => collect($usage)->sum('completed_attempts'),
+                'assessments' => array_slice($usage, 0, 10),
+            ];
+        }
+
+        return $table;
+    }
+
+    /**
+     * @return array{labels: list<string>, values: list<int>}
+     */
+    private function buildUserGrowthChart(int $months = 6): array
+    {
+        $labels = [];
+        $values = [];
+
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $start = Carbon::now()->subMonths($i)->startOfMonth();
+            $end = (clone $start)->endOfMonth();
+            $labels[] = $start->format('M Y');
+            $values[] = User::query()
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+        }
+
+        return ['labels' => $labels, 'values' => $values];
+    }
+
+    /**
+     * @return array{labels: list<string>, values: list<float|int>}
+     */
+    private function buildTokensPurchasedVsUsedChart(): array
+    {
+        $ops = $this->platformOperationsMetrics();
+
+        return [
+            'labels' => ['Tokens purchased', 'Tokens used'],
+            'values' => [$ops['total_tokens_purchased'], $ops['total_tokens_used']],
+        ];
+    }
+
+    /**
+     * @return array{status: string, label: string}
+     */
+    private function resolveSystemStatus(): array
+    {
+        try {
+            DB::connection()->getPdo();
+
+            return ['status' => 'online', 'label' => 'Online'];
+        } catch (\Throwable) {
+            return ['status' => 'offline', 'label' => 'Offline'];
+        }
+    }
+
+    private function assessmentDifficultyLabel(float $avgPercent, float $completionRate): string
+    {
+        if ($avgPercent < 40 || $completionRate < 30) {
+            return 'High difficulty';
+        }
+
+        if ($avgPercent < 55 || $completionRate < 50) {
+            return 'Moderate difficulty';
+        }
+
+        if ($avgPercent >= 75 && $completionRate >= 70) {
+            return 'Accessible';
+        }
+
+        return 'Standard difficulty';
     }
 
     /**

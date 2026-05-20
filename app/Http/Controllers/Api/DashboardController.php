@@ -72,6 +72,17 @@ class DashboardController extends Controller
     }
 
     /**
+     * Drill-down analytics for a specific assessment.
+     */
+    public function assessmentAnalytics(Request $request, int $assessmentId): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $this->analytics->assessmentAnalyticsById($assessmentId),
+        ]);
+    }
+
+    /**
      * Get token balance.
      */
     public function tokenBalance(Request $request): JsonResponse

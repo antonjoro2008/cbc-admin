@@ -58,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard/analytics', [DashboardController::class, 'analytics']);
     Route::get('/dashboard/students/{studentId}', [DashboardController::class, 'studentAnalytics']);
     Route::get('/dashboard/institutions/{institutionId}', [DashboardController::class, 'institutionAnalytics']);
+    Route::get('/dashboard/assessments/{assessmentId}', [DashboardController::class, 'assessmentAnalytics']);
     Route::get('/token-balance', [DashboardController::class, 'tokenBalance']);
     Route::get('/assessment-stats', [DashboardController::class, 'assessmentStats']);
     Route::get('/recent-assessments', [DashboardController::class, 'recentAssessments']);
