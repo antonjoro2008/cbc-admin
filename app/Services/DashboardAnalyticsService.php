@@ -21,7 +21,7 @@ class DashboardAnalyticsService
 {
     private const CACHE_TTL_SECONDS = 300;
 
-    private const ADMIN_CACHE_KEY = 'dashboard.analytics.admin.v2';
+    private const ADMIN_CACHE_KEY = 'dashboard.analytics.admin.v3';
 
     /** @var array<int, int> */
     private array $assessmentTotalMarks = [];
@@ -1465,11 +1465,22 @@ class DashboardAnalyticsService
      * @param  Collection<int, AttemptAnswer>  $answers
      * @return array<string, array{label: string, average_percent: float, competency_level: string, questions_answered: int, marks_awarded: int, marks_possible: int}>
      */
+    private function normalizeCategoryTag(?string $tag): string
+    {
+        $tag = trim((string) $tag);
+
+        if ($tag === '' || strcasecmp($tag, 'Uncategorized') === 0) {
+            return 'General';
+        }
+
+        return $tag;
+    }
+
     private function aggregateCategoryPerformance(Collection $answers): array
     {
         $grouped = [];
         foreach ($answers as $answer) {
-            $tag = $answer->question?->category_tag ?: 'General';
+            $tag = $this->normalizeCategoryTag($answer->question?->category_tag);
             if (! isset($grouped[$tag])) {
                 $grouped[$tag] = ['marks_awarded' => 0, 'marks_possible' => 0, 'count' => 0];
             }
