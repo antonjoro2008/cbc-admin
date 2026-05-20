@@ -25,6 +25,9 @@ class InstitutionResource extends BaseResource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice;
     protected static string|UnitEnum|null $navigationGroup = 'Administration';
 
+    /** Required so Filament shows the global search field (results come from CbcGlobalSearchProvider). */
+    protected static ?string $recordTitleAttribute = 'name';
+
     public static function form(Schema $schema): Schema
     {
         return InstitutionForm::configure($schema);

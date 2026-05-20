@@ -17,6 +17,7 @@ use App\Filament\Resources\BaseResource;
 use App\Models\User;
 use BackedEnum;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
@@ -27,6 +28,14 @@ class UserResource extends BaseResource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUser;
     protected static string|UnitEnum|null $navigationGroup = 'Administration';
+
+    /** Required so Filament shows the global search field (results come from CbcGlobalSearchProvider). */
+    protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return parent::getGlobalSearchEloquentQuery()->where('user_type', 'student');
+    }
 
     public static function form(Schema $schema): Schema
     {

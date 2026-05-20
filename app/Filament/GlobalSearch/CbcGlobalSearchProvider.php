@@ -5,6 +5,7 @@ namespace App\Filament\GlobalSearch;
 use App\Filament\Resources\Institutions\InstitutionResource;
 use App\Filament\Resources\Subjects\SubjectResource;
 use App\Filament\Resources\Users\UserResource;
+use App\Filament\Tables\PlatformLearnersTable;
 use App\Models\Institution;
 use App\Models\Subject;
 use App\Models\User;
@@ -63,11 +64,9 @@ class CbcGlobalSearchProvider implements GlobalSearchProvider
             return [];
         }
 
-        $rosterById = collect($this->analytics->platformLearnerRoster())
-            ->keyBy('student_id');
-
         $students = User::query()
             ->where('user_type', 'student')
+            ->with(['institution:id,name', 'classroom:id,name'])
             ->where(function (Builder $builder) use ($query): void {
                 $this->applySearchColumns(
                     $builder,
@@ -77,34 +76,43 @@ class CbcGlobalSearchProvider implements GlobalSearchProvider
             })
             ->orderBy('name')
             ->limit(self::RESULT_LIMIT)
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'grade_level', 'institution_id', 'classroom_id']);
+
+        if ($students->isEmpty()) {
+            return [];
+        }
+
+        $statsById = PlatformLearnersTable::baseQuery()
+            ->whereIn('users.id', $students->pluck('id'))
+            ->get()
+            ->keyBy('id');
 
         $results = [];
 
         foreach ($students as $student) {
-            $row = $rosterById->get($student->id);
+            $stats = $statsById->get($student->id);
             $details = [
-                'Institution' => $row['institution_name'] ?? '—',
+                'Institution' => $student->institution?->name ?? '—',
             ];
 
-            if (filled($row['grade_level'] ?? null)) {
-                $details['Grade'] = (string) $row['grade_level'];
+            if (filled($student->grade_level)) {
+                $details['Grade'] = (string) $student->grade_level;
             }
 
-            if (filled($row['classroom_name'] ?? null)) {
-                $details['Class'] = (string) $row['classroom_name'];
+            if (filled($student->classroom?->name)) {
+                $details['Class'] = (string) $student->classroom->name;
             }
 
-            if ($row !== null && $row['average_percent'] !== null) {
-                $details['Avg score'] = $this->formatPercent((float) $row['average_percent']);
+            if ($stats?->average_percent !== null) {
+                $details['Avg score'] = $this->formatPercent((float) $stats->average_percent);
             }
 
-            if (filled($row['status'] ?? null)) {
-                $details['Status'] = (string) $row['status'];
+            if (filled($stats?->learner_status)) {
+                $details['Status'] = (string) $stats->learner_status;
             }
 
-            if (($row['completed_attempts'] ?? 0) > 0) {
-                $details['Attempts'] = (string) $row['completed_attempts'];
+            if ((int) ($stats?->completed_attempts ?? 0) > 0) {
+                $details['Attempts'] = (string) $stats->completed_attempts;
             }
 
             $results[] = new GlobalSearchResult(
