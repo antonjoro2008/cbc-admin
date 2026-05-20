@@ -64,15 +64,6 @@ class PlatformOperationsOverviewWidget extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-x-circle')
                 ->color('danger'),
 
-            Stat::make('Total users', (string) ($overview['total_users'] ?? 0))
-                ->description(
-                    ($overview['total_students'] ?? 0).' learners · '.
-                    ($overview['total_teachers'] ?? 0).' teachers · '.
-                    ($overview['total_admins'] ?? 0).' admins'
-                )
-                ->descriptionIcon('heroicon-m-users')
-                ->color('gray'),
-
             Stat::make('System status', $overview['system_status_label'] ?? 'Online')
                 ->description($systemOnline ? 'API and database reachable' : 'Check server connectivity')
                 ->descriptionIcon($systemOnline ? 'heroicon-m-signal' : 'heroicon-m-exclamation-triangle')

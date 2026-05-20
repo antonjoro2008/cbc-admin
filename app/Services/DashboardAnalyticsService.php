@@ -21,7 +21,7 @@ class DashboardAnalyticsService
 {
     private const CACHE_TTL_SECONDS = 300;
 
-    private const ADMIN_CACHE_KEY = 'dashboard.analytics.admin.v3';
+    private const ADMIN_CACHE_KEY = 'dashboard.analytics.admin.v4';
 
     /** @var array<int, int> */
     private array $assessmentTotalMarks = [];
@@ -476,6 +476,16 @@ class DashboardAnalyticsService
         $studentCount = User::where('user_type', 'student')->count();
         $institutionStudents = User::where('user_type', 'student')->whereNotNull('institution_id')->count();
         $individualStudents = User::where('user_type', 'student')->whereNull('institution_id')->count();
+        $institutionAccountCount = User::where('user_type', 'institution')->count();
+        $teacherCount = User::where('user_type', 'teacher')->count();
+        $parentCount = User::where('user_type', 'parent')->count();
+        $adminCount = User::where('user_type', 'admin')->count();
+        $otherAccountCount = User::query()
+            ->where(function ($query): void {
+                $query->whereNull('user_type')
+                    ->orWhereNotIn('user_type', ['student', 'parent', 'teacher', 'institution', 'admin']);
+            })
+            ->count();
         $institutionCount = Institution::count();
         $completedAttempts = AssessmentAttempt::whereNotNull('completed_at')->count();
 
@@ -542,8 +552,9 @@ class DashboardAnalyticsService
                 'institution_students' => $institutionStudents,
                 'individual_students' => $individualStudents,
                 'total_institutions' => $institutionCount,
-                'total_teachers' => User::where('user_type', 'teacher')->count(),
-                'total_parents' => User::where('user_type', 'parent')->count(),
+                'total_institution_accounts' => $institutionAccountCount,
+                'total_teachers' => $teacherCount,
+                'total_parents' => $parentCount,
                 'total_assessments' => Assessment::count(),
                 'total_completed_attempts' => $completedAttempts,
                 'attempts_last_30_days' => $attempts30d,
@@ -561,7 +572,8 @@ class DashboardAnalyticsService
                 'learners_with_guardian_email' => $withGuardianEmail,
                 'total_classrooms' => $totalClassrooms,
                 'distinct_learners_active_last_30_days' => $distinctLearners30d,
-                'total_admins' => User::where('user_type', 'admin')->count(),
+                'total_admins' => $adminCount,
+                'total_other_accounts' => $otherAccountCount,
                 'total_tokens_purchased' => $operations['total_tokens_purchased'],
                 'total_tokens_used' => $operations['total_tokens_used'],
                 'mpesa_payment_success_count' => $operations['mpesa_payment_success_count'],
@@ -591,13 +603,13 @@ class DashboardAnalyticsService
                 'user_growth_over_time' => $this->buildUserGrowthChart(),
                 'tokens_purchased_vs_used' => $this->buildTokensPurchasedVsUsedChart(),
                 'users_by_type' => [
-                    'labels' => ['Learners', 'Institutions', 'Teachers', 'Parents', 'Admins'],
+                    'labels' => ['Learners', 'School accounts', 'Teachers', 'Parents', 'Admins'],
                     'values' => [
                         $studentCount,
-                        User::where('user_type', 'institution')->count(),
-                        User::where('user_type', 'teacher')->count(),
-                        User::where('user_type', 'parent')->count(),
-                        User::where('user_type', 'admin')->count(),
+                        $institutionAccountCount,
+                        $teacherCount,
+                        $parentCount,
+                        $adminCount,
                     ],
                 ],
                 'gender_cohort' => $this->genderCohortChart($genderCohort),

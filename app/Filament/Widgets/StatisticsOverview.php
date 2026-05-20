@@ -31,7 +31,26 @@ class StatisticsOverview extends StatsOverviewWidget
         $overview = $data['overview'];
         $inclusion = $data['inclusion_metrics']['gender_reporting'] ?? [];
 
+        $userBreakdownParts = [
+            ($overview['total_students'] ?? 0).' learners',
+            ($overview['total_parents'] ?? 0).' parents',
+            ($overview['total_teachers'] ?? 0).' teachers',
+            ($overview['total_institution_accounts'] ?? 0).' school accounts',
+            ($overview['total_admins'] ?? 0).' admins',
+        ];
+
+        if (($overview['total_other_accounts'] ?? 0) > 0) {
+            $userBreakdownParts[] = ($overview['total_other_accounts']).' other';
+        }
+
+        $userBreakdown = collect($userBreakdownParts)->join(' · ');
+
         return [
+            Stat::make('Total users', (string) ($overview['total_users'] ?? 0))
+                ->description($userBreakdown)
+                ->descriptionIcon('heroicon-m-users')
+                ->color('gray'),
+
             Stat::make('Total learners', (string) $overview['total_students'])
                 ->description($overview['institution_students'].' in schools · '.$overview['individual_students'].' individual')
                 ->descriptionIcon('heroicon-m-academic-cap')
@@ -39,10 +58,34 @@ class StatisticsOverview extends StatsOverviewWidget
 
             Stat::make('Total parents', (string) $overview['total_parents'])
                 ->description('Registered parent accounts')
-                ->descriptionIcon('heroicon-m-users')
+                ->descriptionIcon('heroicon-m-user-group')
                 ->color('secondary'),
 
-            Stat::make('Schools / institutions', (string) $overview['total_institutions'])
+            Stat::make('Teachers', (string) $overview['total_teachers'])
+                ->description('Teaching staff accounts')
+                ->descriptionIcon('heroicon-m-briefcase')
+                ->color('info'),
+
+            Stat::make('School accounts', (string) ($overview['total_institution_accounts'] ?? 0))
+                ->description('Institution admin logins (not learner or parent accounts)')
+                ->descriptionIcon('heroicon-m-building-office')
+                ->color('warning'),
+
+            Stat::make('Admins', (string) ($overview['total_admins'] ?? 0))
+                ->description('Platform administrator accounts')
+                ->descriptionIcon('heroicon-m-shield-check')
+                ->color('danger'),
+
+            ...(($overview['total_other_accounts'] ?? 0) > 0
+                ? [
+                    Stat::make('Other accounts', (string) $overview['total_other_accounts'])
+                        ->description('Users without a standard account type')
+                        ->descriptionIcon('heroicon-m-question-mark-circle')
+                        ->color('gray'),
+                ]
+                : []),
+
+            Stat::make('Schools registered', (string) $overview['total_institutions'])
                 ->description(($overview['total_classrooms'] ?? 0).' classrooms platform-wide')
                 ->descriptionIcon('heroicon-m-building-office-2')
                 ->color('info'),
@@ -66,11 +109,6 @@ class StatisticsOverview extends StatsOverviewWidget
                 ->description(($overview['learners_with_guardian_email'] ?? 0).' learners with guardian email on file')
                 ->descriptionIcon('heroicon-m-envelope')
                 ->color('info'),
-
-            Stat::make('Teachers', (string) $overview['total_teachers'])
-                ->description('Teaching staff on the platform')
-                ->descriptionIcon('heroicon-m-user-group')
-                ->color('gray'),
 
             Stat::make('Gender data coverage', ($inclusion['reporting_rate_percent'] ?? 0).'%')
                 ->description(($inclusion['learners_with_gender'] ?? 0).' learners with gender recorded')
