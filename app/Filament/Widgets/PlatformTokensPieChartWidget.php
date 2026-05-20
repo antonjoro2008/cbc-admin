@@ -28,7 +28,7 @@ class PlatformTokensPieChartWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $chart = app(DashboardAnalyticsService::class)->adminAnalytics()['charts']['tokens_purchased_vs_used'];
+        $chart = app(DashboardAnalyticsService::class)->adminChart('tokens_purchased_vs_used');
 
         return [
             'labels' => $chart['labels'],

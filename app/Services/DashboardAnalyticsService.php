@@ -20,6 +20,8 @@ class DashboardAnalyticsService
 {
     private const CACHE_TTL_SECONDS = 300;
 
+    private const ADMIN_CACHE_KEY = 'dashboard.analytics.admin.v2';
+
     /** @var array<int, int> */
     private array $assessmentTotalMarks = [];
 
@@ -45,6 +47,7 @@ class DashboardAnalyticsService
     public static function flushCache(?int $institutionId = null): void
     {
         Cache::forget('dashboard.analytics.admin');
+        Cache::forget(self::ADMIN_CACHE_KEY);
 
         if ($institutionId !== null) {
             Cache::forget("dashboard.analytics.institution.{$institutionId}");
@@ -419,10 +422,44 @@ class DashboardAnalyticsService
             return $this->adminAnalyticsMemory;
         }
 
-        return $this->adminAnalyticsMemory = Cache::remember(
-            'dashboard.analytics.admin',
-            self::CACHE_TTL_SECONDS,
-            fn () => $this->computeAdminAnalytics(),
+        $cached = Cache::get(self::ADMIN_CACHE_KEY);
+
+        if ($cached !== null && is_array($cached) && $this->isCompleteAdminPayload($cached)) {
+            return $this->adminAnalyticsMemory = $cached;
+        }
+
+        Cache::forget('dashboard.analytics.admin');
+        Cache::forget(self::ADMIN_CACHE_KEY);
+
+        $fresh = $this->computeAdminAnalytics();
+        Cache::put(self::ADMIN_CACHE_KEY, $fresh, self::CACHE_TTL_SECONDS);
+
+        return $this->adminAnalyticsMemory = $fresh;
+    }
+
+    /**
+     * Safe access to a platform admin chart (handles stale or partial cache).
+     *
+     * @return array{labels: list<string>, values: list<int|float>}
+     */
+    public function adminChart(string $key): array
+    {
+        $charts = $this->adminAnalytics()['charts'] ?? [];
+
+        return $charts[$key] ?? ['labels' => [], 'values' => []];
+    }
+
+    /**
+     * Detect payloads cached before newer dashboard fields were added.
+     */
+    private function isCompleteAdminPayload(array $data): bool
+    {
+        return isset(
+            $data['charts']['user_growth_over_time'],
+            $data['charts']['tokens_purchased_vs_used'],
+            $data['overview']['total_tokens_purchased'],
+            $data['overview']['system_status'],
+            $data['assessment_usage_by_school'],
         );
     }
 

@@ -28,7 +28,7 @@ class PlatformUserGrowthChartWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $chart = app(DashboardAnalyticsService::class)->adminAnalytics()['charts']['user_growth_over_time'];
+        $chart = app(DashboardAnalyticsService::class)->adminChart('user_growth_over_time');
 
         return [
             'labels' => $chart['labels'],
