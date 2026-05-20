@@ -2,13 +2,13 @@
 
 namespace App\Filament\Widgets\SchoolAnalytics;
 
-use App\Filament\Widgets\Concerns\ResolvesSchoolAnalytics;
+use App\Filament\Widgets\Concerns\ResolvesInstitutionAnalytics;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class SchoolInclusionStatsWidget extends StatsOverviewWidget
 {
-    use ResolvesSchoolAnalytics;
+    use ResolvesInstitutionAnalytics;
 
     protected int | string | array $columnSpan = 'full';
 
@@ -24,7 +24,7 @@ class SchoolInclusionStatsWidget extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $gr = $this->schoolInclusionView()['gender_reporting'] ?? [];
+        $gr = $this->institutionInclusionView()['gender_reporting'] ?? [];
 
         return [
             Stat::make('Gender reporting', number_format($gr['reporting_rate_percent'] ?? 0, 1).'%'),

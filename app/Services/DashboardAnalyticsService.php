@@ -8,6 +8,7 @@ use App\Models\AttemptAnswer;
 use App\Models\Classroom;
 use App\Models\Institution;
 use App\Models\Payment;
+use App\Models\Subject;
 use App\Models\TokenTransaction;
 use App\Models\TokenUsage;
 use App\Models\User;
@@ -1194,6 +1195,110 @@ class DashboardAnalyticsService
         $student = User::where('id', $studentId)->where('user_type', 'student')->firstOrFail();
 
         return $this->studentAnalytics($student);
+    }
+
+    /**
+     * Analytics for a specific teacher (classroom-scoped).
+     *
+     * @return array<string, mixed>
+     */
+    public function teacherAnalyticsById(int $teacherId): array
+    {
+        $teacher = User::where('id', $teacherId)->where('user_type', 'teacher')->firstOrFail();
+
+        return $this->teacherAnalytics($teacher);
+    }
+
+    /**
+     * Analytics for all assessments under a subject.
+     *
+     * @return array<string, mixed>
+     */
+    public function subjectAnalyticsById(int $subjectId): array
+    {
+        return Cache::remember(
+            "dashboard.analytics.subject.{$subjectId}",
+            self::CACHE_TTL_SECONDS,
+            fn () => $this->computeSubjectAnalyticsById($subjectId),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function computeSubjectAnalyticsById(int $subjectId): array
+    {
+        $subject = Subject::find($subjectId, ['id', 'name', 'code']);
+        $assessmentIds = Assessment::query()->where('subject_id', $subjectId)->pluck('id');
+
+        if ($assessmentIds->isEmpty()) {
+            return [
+                'subject' => $subject?->only(['id', 'name', 'code']),
+                'overview' => [
+                    'total_assessments' => 0,
+                    'total_attempts' => 0,
+                    'completed_attempts' => 0,
+                    'average_score_percent' => 0,
+                    'completion_rate_percent' => 0,
+                ],
+                'charts' => [
+                    'assessment_performance' => ['labels' => [], 'values' => []],
+                    'activity_last_14_days' => ['labels' => [], 'values' => []],
+                ],
+                'assessment_breakdown' => [],
+            ];
+        }
+
+        $attempts = AssessmentAttempt::query()
+            ->whereIn('assessment_id', $assessmentIds)
+            ->whereNotNull('completed_at')
+            ->with(['assessment:id,title,subject_id', 'student:id,name'])
+            ->orderBy('completed_at', 'desc')
+            ->limit(1000)
+            ->get();
+
+        $studentIds = $attempts->pluck('student_id')->unique();
+        $totalAttempts = AssessmentAttempt::query()->whereIn('assessment_id', $assessmentIds)->count();
+        $completedCount = $attempts->count();
+        $percents = $this->mapAttemptPercents($attempts);
+        $avgPercent = $this->averageFromPercents($percents);
+        $completionRate = $totalAttempts > 0
+            ? round(($completedCount / $totalAttempts) * 100, 1)
+            : 0.0;
+
+        $byAssessment = [];
+        foreach ($attempts->groupBy('assessment_id') as $assessmentId => $group) {
+            $groupPercents = $this->mapAttemptPercents($group);
+            $byAssessment[] = [
+                'assessment_id' => $assessmentId,
+                'assessment_name' => $group->first()?->assessment?->title ?? 'Assessment',
+                'completed_attempts' => $group->count(),
+                'average_percent' => $this->averageFromPercents($groupPercents),
+            ];
+        }
+
+        usort($byAssessment, fn (array $a, array $b): int => ($b['completed_attempts'] ?? 0) <=> ($a['completed_attempts'] ?? 0));
+
+        return [
+            'subject' => $subject?->only(['id', 'name', 'code']),
+            'overview' => [
+                'total_assessments' => $assessmentIds->count(),
+                'total_attempts' => $totalAttempts,
+                'completed_attempts' => $completedCount,
+                'average_score_percent' => $avgPercent,
+                'completion_rate_percent' => $completionRate,
+                'distinct_learners' => $studentIds->count(),
+            ],
+            'competency_distribution' => $this->competencyDistribution($percents),
+            'charts' => [
+                'assessment_performance' => [
+                    'labels' => array_column($byAssessment, 'assessment_name'),
+                    'values' => array_column($byAssessment, 'average_percent'),
+                ],
+                'activity_last_14_days' => $this->activityChartForStudents($studentIds->all()),
+            ],
+            'assessment_breakdown' => $byAssessment,
+        ];
     }
 
     // -------------------------------------------------------------------------

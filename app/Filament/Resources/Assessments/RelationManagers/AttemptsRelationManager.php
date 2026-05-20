@@ -2,24 +2,57 @@
 
 namespace App\Filament\Resources\Assessments\RelationManagers;
 
+use App\Filament\Resources\RelationManagers\Concerns\DisplaysRelationManagerAnalytics;
+use App\Filament\Widgets\Analytics\AssessmentCompletionChartWidget;
+use App\Filament\Widgets\Analytics\AssessmentOverviewStatsWidget;
+use App\Filament\Widgets\Analytics\AssessmentPassFailChartWidget;
+use App\Models\Assessment;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Actions\Action;
-use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables\Table;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\Filter;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\IconEntry;
-use Filament\Schemas\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
 
 class AttemptsRelationManager extends RelationManager
 {
+    use DisplaysRelationManagerAnalytics;
+
     protected static string $relationship = 'attempts';
+
+    /**
+     * @return list<class-string>
+     */
+    protected function relationAnalyticsWidgets(): array
+    {
+        if (! $this->getOwnerRecord() instanceof Assessment) {
+            return [];
+        }
+
+        return [
+            AssessmentOverviewStatsWidget::class,
+            AssessmentPassFailChartWidget::class,
+            AssessmentCompletionChartWidget::class,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function relationAnalyticsWidgetData(): array
+    {
+        return [
+            'assessmentId' => (int) $this->getOwnerRecord()->getKey(),
+        ];
+    }
 
     public function table(Table $table): Table
     {
@@ -38,14 +71,13 @@ class AttemptsRelationManager extends RelationManager
                 TextColumn::make('total_marks')
                     ->label('Total Marks (Auto)')
                     ->getStateUsing(function ($record) {
-                        // Get total marks for auto-marked questions only
                         $totalMarks = $record->assessment->questions()
                             ->whereIn('question_type', ['mcq', 'true_false', 'matching', 'fill_blank'])
                             ->sum('marks');
 
                         return $totalMarks ?: 'N/A';
                     })
-                    ->sortable(false), // Can't sort computed columns
+                    ->sortable(false),
             ])
             ->filters([
                 SelectFilter::make('attempt_number')
@@ -65,11 +97,11 @@ class AttemptsRelationManager extends RelationManager
 
                 Filter::make('completed')
                     ->label('Completed Attempts')
-                    ->query(fn($query) => $query->whereNotNull('completed_at')),
+                    ->query(fn ($query) => $query->whereNotNull('completed_at')),
 
                 Filter::make('in_progress')
                     ->label('In Progress Attempts')
-                    ->query(fn($query) => $query->whereNull('completed_at')),
+                    ->query(fn ($query) => $query->whereNull('completed_at')),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -134,9 +166,8 @@ class AttemptsRelationManager extends RelationManager
                             ]),
                     ])
                     ->fillForm(function ($record): array {
-                        // Load the attempt with its answers, questions, feedback, and feedback media
                         $attempt = $record->load(['attemptAnswers.question', 'attemptAnswers.feedback.media', 'student']);
-                        
+
                         return [
                             'student' => $attempt->student,
                             'attempt_number' => $attempt->attempt_number,

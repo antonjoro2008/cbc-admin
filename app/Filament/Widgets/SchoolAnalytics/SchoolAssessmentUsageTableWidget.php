@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets\SchoolAnalytics;
 
-use App\Filament\Widgets\Concerns\ResolvesSchoolAnalytics;
+use App\Filament\Widgets\Concerns\ResolvesInstitutionAnalytics;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -10,13 +10,13 @@ use Filament\Widgets\TableWidget;
 
 class SchoolAssessmentUsageTableWidget extends TableWidget
 {
-    use ResolvesSchoolAnalytics;
+    use ResolvesInstitutionAnalytics;
 
     protected int | string | array $columnSpan = 'full';
 
     public function table(Table $table): Table
     {
-        $rows = $this->schoolAnalytics()['assessment_usage'] ?? [];
+        $rows = $this->institutionAnalytics()['assessment_usage'] ?? [];
 
         return $table
             ->heading('Assessment usage')

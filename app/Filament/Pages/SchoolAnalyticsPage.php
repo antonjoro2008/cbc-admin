@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Support\InstitutionAnalyticsWidgets;
 use App\Filament\Widgets\SchoolAnalytics\SchoolActionItemsWidget;
 use App\Filament\Widgets\SchoolAnalytics\SchoolAssessmentUsageTableWidget;
 use App\Filament\Widgets\SchoolAnalytics\SchoolClassroomsTableWidget;
@@ -90,13 +91,13 @@ class SchoolAnalyticsPage extends Page
             return [];
         }
 
-        $widgets = [
-            SchoolOverviewStatsWidget::class,
-            SchoolLearnersTableWidget::class,
-            SchoolInclusionStatsWidget::class,
-            SchoolGenderRosterTableWidget::class,
-            SchoolGenderOutcomesTableWidget::class,
-        ];
+        $widgets = InstitutionAnalyticsWidgets::forInstitution($this->institutionId);
+
+        $widgets[] = SchoolOverviewStatsWidget::class;
+        $widgets[] = SchoolLearnersTableWidget::class;
+        $widgets[] = SchoolInclusionStatsWidget::class;
+        $widgets[] = SchoolGenderRosterTableWidget::class;
+        $widgets[] = SchoolGenderOutcomesTableWidget::class;
 
         if (! empty($analytics['classroom_breakdown'])) {
             $widgets[] = SchoolClassroomsTableWidget::class;

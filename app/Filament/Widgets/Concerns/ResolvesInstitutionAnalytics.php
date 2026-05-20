@@ -5,7 +5,7 @@ namespace App\Filament\Widgets\Concerns;
 use App\Services\DashboardAnalyticsService;
 use Livewire\Attributes\Reactive;
 
-trait ResolvesSchoolAnalytics
+trait ResolvesInstitutionAnalytics
 {
     public static function isDiscovered(): bool
     {
@@ -15,17 +15,9 @@ trait ResolvesSchoolAnalytics
     #[Reactive]
     public ?int $institutionId = null;
 
-    protected function schoolInstitutionId(): ?int
+    protected function institutionAnalytics(): array
     {
-        return $this->institutionId;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function schoolAnalytics(): array
-    {
-        $id = $this->schoolInstitutionId();
+        $id = $this->institutionId;
 
         if (! $id) {
             return [];
@@ -37,9 +29,9 @@ trait ResolvesSchoolAnalytics
     /**
      * @return array<string, mixed>
      */
-    protected function schoolInclusionView(): array
+    protected function institutionInclusionView(): array
     {
-        $metrics = $this->schoolAnalytics()['inclusion_metrics'] ?? [];
+        $metrics = $this->institutionAnalytics()['inclusion_metrics'] ?? [];
 
         return app(DashboardAnalyticsService::class)->formatInclusionForView($metrics);
     }

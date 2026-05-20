@@ -2,19 +2,19 @@
 
 namespace App\Filament\Widgets\SchoolAnalytics;
 
-use App\Filament\Widgets\Concerns\ResolvesSchoolAnalytics;
+use App\Filament\Widgets\Concerns\ResolvesInstitutionAnalytics;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class SchoolOverviewStatsWidget extends StatsOverviewWidget
 {
-    use ResolvesSchoolAnalytics;
+    use ResolvesInstitutionAnalytics;
 
     protected int | string | array $columnSpan = 'full';
 
     protected function getHeading(): ?string
     {
-        $name = $this->schoolAnalytics()['institution']['name'] ?? null;
+        $name = $this->institutionAnalytics()['institution']['name'] ?? null;
 
         return $name ? $name : 'School overview';
     }
@@ -26,7 +26,7 @@ class SchoolOverviewStatsWidget extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $analytics = $this->schoolAnalytics();
+        $analytics = $this->institutionAnalytics();
 
         if ($analytics === []) {
             return [];

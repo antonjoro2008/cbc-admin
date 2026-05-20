@@ -2,7 +2,9 @@
 
 namespace App\Filament\Widgets\SchoolAnalytics;
 
-use App\Filament\Widgets\Concerns\ResolvesSchoolAnalytics;
+use App\Filament\Resources\Users\UserResource;
+use App\Filament\Widgets\Concerns\ResolvesInstitutionAnalytics;
+use Filament\Actions\Action;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -10,7 +12,7 @@ use Filament\Widgets\TableWidget;
 
 class SchoolLearnersTableWidget extends TableWidget
 {
-    use ResolvesSchoolAnalytics;
+    use ResolvesInstitutionAnalytics;
 
     protected int | string | array $columnSpan = 'full';
 
@@ -67,6 +69,14 @@ class SchoolLearnersTableWidget extends TableWidget
                     ->placeholder('—')
                     ->toggleable(),
             ])
+            ->recordActions([
+                Action::make('viewPerformance')
+                    ->label('Charts')
+                    ->icon('heroicon-o-chart-bar')
+                    ->url(fn (array $record): string => UserResource::getUrl('view', [
+                        'record' => $record['student_id'],
+                    ])),
+            ])
             ->defaultSort('average_percent', 'desc')
             ->paginated([10, 25, 50])
             ->striped()
@@ -79,7 +89,7 @@ class SchoolLearnersTableWidget extends TableWidget
      */
     private function learnerRecords(): array
     {
-        $analytics = $this->schoolAnalytics();
+        $analytics = $this->institutionAnalytics();
         $inactiveIds = collect($analytics['inactive_learners'] ?? [])->pluck('student_id')->flip();
 
         return collect($analytics['student_roster'] ?? [])

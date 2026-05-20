@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets\SchoolAnalytics;
 
-use App\Filament\Widgets\Concerns\ResolvesSchoolAnalytics;
+use App\Filament\Widgets\Concerns\ResolvesInstitutionAnalytics;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -11,7 +11,7 @@ use Filament\Widgets\TableWidget;
 
 class SchoolGenderRosterTableWidget extends TableWidget
 {
-    use ResolvesSchoolAnalytics;
+    use ResolvesInstitutionAnalytics;
 
     protected int | string | array $columnSpan = 1;
 
@@ -20,7 +20,7 @@ class SchoolGenderRosterTableWidget extends TableWidget
         return $table
             ->heading('Roster by gender')
             ->description(null)
-            ->records(fn (): array => collect($this->schoolInclusionView()['cohort_rows'] ?? [])
+            ->records(fn (): array => collect($this->institutionInclusionView()['cohort_rows'] ?? [])
                 ->map(fn (array $row): array => [
                     'key' => (string) $row['key'],
                     'label' => $row['label'],

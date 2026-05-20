@@ -2,12 +2,12 @@
 
 namespace App\Filament\Widgets\SchoolAnalytics;
 
-use App\Filament\Widgets\Concerns\ResolvesSchoolAnalytics;
+use App\Filament\Widgets\Concerns\ResolvesInstitutionAnalytics;
 use Filament\Widgets\Widget;
 
 class SchoolActionItemsWidget extends Widget
 {
-    use ResolvesSchoolAnalytics;
+    use ResolvesInstitutionAnalytics;
 
     protected string $view = 'filament.widgets.action-items';
 
@@ -17,7 +17,7 @@ class SchoolActionItemsWidget extends Widget
     {
         return [
             'heading' => 'Recommended actions',
-            'action_items' => $this->schoolAnalytics()['action_items'] ?? [],
+            'action_items' => $this->institutionAnalytics()['action_items'] ?? [],
         ];
     }
 }
