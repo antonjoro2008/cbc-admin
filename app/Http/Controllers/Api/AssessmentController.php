@@ -622,9 +622,6 @@ class AssessmentController extends Controller
                 }
             }
 
-            // Calculate percentage based on auto-marked questions only
-            $percentage = $totalMarksForAutoMarked > 0 ? round(($marksAwarded / $totalMarksForAutoMarked) * 100, 2) : 0;
-
             // Calculate category-specific percentages
             $categoryScoresData = [];
             foreach ($categoryScores as $categoryTag => $score) {
@@ -637,6 +634,16 @@ class AssessmentController extends Controller
                     'percentage' => $percentageForCategory
                 ];
             }
+
+            $percentFromAutoMarked = $totalMarksForAutoMarked > 0
+                ? round(($marksAwarded / $totalMarksForAutoMarked) * 100, 2)
+                : 0;
+            $categoryTotalOut = array_sum($categoryTotals);
+            $categoryTotalScore = array_sum($categoryScores);
+            // Multi-subject: overall = marks earned across subjects / total subject marks
+            $percentage = (count($categoryScores) >= 2 && $categoryTotalOut > 0)
+                ? round(($categoryTotalScore / $categoryTotalOut) * 100, 2)
+                : $percentFromAutoMarked;
 
             // Update attempt with final score
             $attempt->update(['score' => $marksAwarded]);

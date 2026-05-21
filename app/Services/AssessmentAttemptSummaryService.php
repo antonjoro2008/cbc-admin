@@ -228,9 +228,6 @@ class AssessmentAttemptSummaryService
             'attemptAnswers.feedback.media',
         ]);
 
-        $marksMap = $this->assessmentTotalMarksMap([(int) $attempt->assessment_id]);
-        $percent = $this->attemptPercent($attempt, $marksMap) ?? 0.0;
-
         $totalQuestions = 0;
         $questionsAnswered = $attempt->attemptAnswers->count();
         $autoMarkedQuestions = 0;
@@ -301,6 +298,15 @@ class AssessmentAttemptSummaryService
                 'percentage' => $totalForCategory > 0 ? round(($score / $totalForCategory) * 100, 2) : 0,
             ];
         }
+
+        $percentFromAutoMarked = $totalMarksForAutoMarked > 0
+            ? round(($marksAwarded / $totalMarksForAutoMarked) * 100, 2)
+            : 0;
+        $categoryTotalOut = array_sum($categoryTotals);
+        $categoryTotalScore = array_sum($categoryScores);
+        $percent = (count($categoryScores) >= 2 && $categoryTotalOut > 0)
+            ? round(($categoryTotalScore / $categoryTotalOut) * 100, 2)
+            : $percentFromAutoMarked;
 
         $timeTaken = 0;
         if ($attempt->started_at && $attempt->completed_at) {
