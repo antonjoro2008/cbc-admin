@@ -137,6 +137,8 @@ class DashboardAnalyticsService
                 'active_days_last_30' => $this->distinctActiveDays($attempts, 30),
             ],
             'assessment_history' => $historyAttempts->map(fn (AssessmentAttempt $attempt) => [
+                'attempt_id' => $attempt->id,
+                'assessment_id' => $attempt->assessment_id,
                 'assessment_name' => $attempt->assessment?->title ?? 'Assessment',
                 'score_percent' => $this->attemptPercent($attempt),
                 'date_taken' => $attempt->completed_at?->toIso8601String(),

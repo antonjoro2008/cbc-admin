@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\TeacherStudentController;
 use App\Http\Controllers\Api\TeacherDashboardController;
 use App\Http\Controllers\Api\TeacherShareController;
 use App\Http\Controllers\Api\PlatformStatsController;
+use App\Http\Controllers\Api\AssessmentAttemptController;
 use App\Http\Controllers\SmsController;
 
 /*
@@ -79,6 +80,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/assessments/submit', [AssessmentController::class, 'submitAssessment']);
     Route::post('/assessments/track-progress', [AssessmentController::class, 'trackProgress']);
     Route::get('/my-assessments', [AssessmentController::class, 'myAssessments']);
+    Route::get('/assessment-attempts', [AssessmentAttemptController::class, 'index']);
+    Route::get('/assessment-attempts/{attemptId}', [AssessmentAttemptController::class, 'show']);
     
     // Payments
     Route::get('/payments', [PaymentController::class, 'index']);

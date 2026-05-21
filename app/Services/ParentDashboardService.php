@@ -203,7 +203,14 @@ class ParentDashboardService
             'has_progress_trend' => ($overview['total_completed_attempts'] ?? 0) >= 2,
             'improvement_trend' => $trend,
         ];
-        $base['recent_assessments'] = array_slice($history, 0, 5);
+        $base['recent_assessments'] = array_slice(array_map(fn (array $row): array => [
+            'attempt_id' => $row['attempt_id'] ?? null,
+            'assessment_id' => $row['assessment_id'] ?? null,
+            'assessment_name' => $row['assessment_name'] ?? 'Assessment',
+            'score_percent' => $row['score_percent'] ?? 0,
+            'date_taken' => $row['date_taken'] ?? null,
+            'subject' => $row['subject'] ?? null,
+        ], $history), 0, 5);
         $base['strengths'] = array_slice($detail['strengths'] ?? [], 0, 2);
         $base['areas_for_improvement'] = array_slice($detail['areas_for_improvement'] ?? [], 0, 2);
 
