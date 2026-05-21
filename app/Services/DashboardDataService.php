@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Assessment;
+use App\Services\ParentDashboardService;
 use App\Models\AssessmentAttempt;
 use App\Models\AttemptAnswer;
 use App\Models\Setting;
@@ -87,6 +88,10 @@ class DashboardDataService
 
         if ($user->isAdmin()) {
             return $this->platformAssessmentStats();
+        }
+
+        if ($user->isParent()) {
+            return app(ParentDashboardService::class)->householdAssessmentStats($user);
         }
 
         return $this->emptyAssessmentStats();

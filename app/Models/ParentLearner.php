@@ -17,6 +17,7 @@ class ParentLearner extends Model
      */
     protected $fillable = [
         'user_id',
+        'student_user_id',
         'name',
         'grade_level',
     ];
@@ -27,5 +28,13 @@ class ParentLearner extends Model
     public function parent(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Linked student account used for assessments (optional).
+     */
+    public function studentAccount(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'student_user_id');
     }
 }

@@ -384,35 +384,7 @@ class DashboardAnalyticsService
      */
     public function parentAnalytics(User $parent): array
     {
-        $learners = $parent->parentLearners()->get();
-
-        return [
-            'overview' => [
-                'registered_learners' => $learners->count(),
-                'note' => 'Link learner accounts to student users for full performance analytics.',
-            ],
-            'learners' => $learners->map(fn ($l) => [
-                'id' => $l->id,
-                'name' => $l->name,
-                'grade_level' => $l->grade_level,
-            ]),
-            'charts' => [
-                'learners_by_grade' => $this->parentGradeChart($learners),
-            ],
-            'action_items' => $learners->isEmpty()
-                ? [[
-                    'priority' => 'medium',
-                    'type' => 'setup',
-                    'title' => 'Add your children',
-                    'description' => 'Register learner profiles so you can track their grade levels and progress.',
-                ]]
-                : [[
-                    'priority' => 'low',
-                    'type' => 'engagement',
-                    'title' => 'Encourage practice',
-                    'description' => 'Have learners complete assessments regularly to build competency data.',
-                ]],
-        ];
+        return app(ParentDashboardService::class)->build($parent);
     }
 
     /**

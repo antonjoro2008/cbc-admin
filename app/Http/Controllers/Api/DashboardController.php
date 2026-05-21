@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\DashboardAnalyticsService;
 use App\Services\DashboardDataService;
+use App\Services\ParentDashboardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -142,6 +143,10 @@ class DashboardController extends Controller
 
         if ($viewer->isStudent() && $viewer->id === $student->id) {
             return true;
+        }
+
+        if ($viewer->isParent()) {
+            return app(ParentDashboardService::class)->parentCanViewStudent($viewer, $student);
         }
 
         if ($viewer->institution_id && $student->institution_id === $viewer->institution_id) {
