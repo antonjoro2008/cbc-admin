@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\TeacherDashboardController;
 use App\Http\Controllers\Api\TeacherShareController;
 use App\Http\Controllers\Api\PlatformStatsController;
 use App\Http\Controllers\Api\AssessmentAttemptController;
+use App\Http\Controllers\Api\AssessmentBookController;
 use App\Http\Controllers\SmsController;
 
 /*
@@ -129,6 +130,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('teacher')->group(function () {
         Route::get('/teacher/dashboard', [TeacherDashboardController::class, 'index']);
         Route::post('/teacher/students', [TeacherStudentController::class, 'store']);
+        Route::get('/teacher/assessment-book', [AssessmentBookController::class, 'index']);
+        Route::post('/teacher/assessment-book', [AssessmentBookController::class, 'store']);
+        Route::delete('/teacher/assessment-book/{entry}', [AssessmentBookController::class, 'destroy']);
+        Route::get('/teacher/students/{student}/performance-report', [AssessmentBookController::class, 'performanceReport']);
         Route::post('/teacher/students/{student}/share/guardian-email', [TeacherShareController::class, 'sendGuardianReport']);
     });
     

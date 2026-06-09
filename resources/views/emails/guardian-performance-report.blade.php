@@ -59,9 +59,10 @@
           </div>
         </div>
 
-        <h3 style="margin:0 0 10px 0;color:#111827;font-size:15px;">Subject breakdown</h3>
+        <h3 style="margin:0 0 10px 0;color:#111827;font-size:15px;">Teacher assessment book</h3>
+        <p style="margin:0 0 10px 0;color:#6b7280;font-size:12px;">Summary from your teacher’s classroom records (weekly, monthly, termly).</p>
 
-        <div style="border:1px solid #eef2f7;border-radius:14px;overflow:hidden;">
+        <div style="border:1px solid #eef2f7;border-radius:14px;overflow:hidden;margin-bottom:20px;">
           <table style="width:100%;border-collapse:collapse;">
             <thead>
               <tr style="background:#f9fafb;">
@@ -80,7 +81,51 @@
               @endforeach
               @if(empty($report['subjects']))
                 <tr>
-                  <td colspan="3" style="padding:12px;border-top:1px solid #eef2f7;color:#6b7280;font-size:13px;">No subject data available yet.</td>
+                  <td colspan="3" style="padding:12px;border-top:1px solid #eef2f7;color:#6b7280;font-size:13px;">No assessment book entries yet.</td>
+                </tr>
+              @endif
+            </tbody>
+          </table>
+        </div>
+
+        @php($digital = $report['digital_attempts'] ?? [])
+        <h3 style="margin:0 0 6px 0;color:#111827;font-size:15px;">Digital assessment attempts</h3>
+        <p style="margin:0 0 10px 0;color:#6b7280;font-size:12px;">
+          Completed on Gravity CBC
+          @if(($digital['count'] ?? 0) > 0)
+            · average {{ $digital['average_percent'] ?? '—' }} ({{ $digital['overall_level'] ?? '—' }})
+          @endif
+        </p>
+
+        <div style="border:1px solid #e0e7ff;border-radius:14px;overflow:hidden;background:#fafbff;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#eef2ff;">
+                <th align="left" style="padding:10px 12px;font-size:12px;color:#4338ca;">ASSESSMENT</th>
+                <th align="left" style="padding:10px 12px;font-size:12px;color:#4338ca;">DATE</th>
+                <th align="left" style="padding:10px 12px;font-size:12px;color:#4338ca;">SCORE</th>
+                <th align="left" style="padding:10px 12px;font-size:12px;color:#4338ca;">LEVEL</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach(($digital['attempts'] ?? []) as $row)
+                <tr>
+                  <td style="padding:10px 12px;border-top:1px solid #e0e7ff;color:#111827;font-size:13px;">
+                    <strong>{{ $row['assessment_title'] ?? 'Assessment' }}</strong>
+                    @if(!empty($row['subject']))
+                      <br><span style="font-size:11px;color:#6b7280;">{{ $row['subject'] }}</span>
+                    @endif
+                  </td>
+                  <td style="padding:10px 12px;border-top:1px solid #e0e7ff;color:#111827;font-size:12px;">{{ $row['completed_at'] ?? '—' }}</td>
+                  <td style="padding:10px 12px;border-top:1px solid #e0e7ff;color:#111827;font-size:13px;">
+                    {{ isset($row['score_percent']) ? $row['score_percent'].'%' : '—' }}
+                  </td>
+                  <td style="padding:10px 12px;border-top:1px solid #e0e7ff;color:#111827;font-size:12px;">{{ $row['level'] ?? '—' }}</td>
+                </tr>
+              @endforeach
+              @if(empty($digital['attempts']))
+                <tr>
+                  <td colspan="4" style="padding:12px;border-top:1px solid #e0e7ff;color:#6b7280;font-size:13px;">No completed digital attempts this year.</td>
                 </tr>
               @endif
             </tbody>
