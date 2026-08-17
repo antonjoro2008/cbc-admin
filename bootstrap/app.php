@@ -17,9 +17,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'institution' => \App\Http\Middleware\InstitutionMiddleware::class,
             'parent' => \App\Http\Middleware\ParentMiddleware::class,
             'teacher' => \App\Http\Middleware\TeacherMiddleware::class,
+            'coop.ipn' => \App\Http\Middleware\CoopIpnAuth::class,
         ])->validateCsrfTokens(except: [
                     'api/login',
                     'api/register',
+                    'api/payments/mpesa',
+                    'api/payments/coop/stk-callback',
+                    'api/payments/coop/ipn',
                 ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

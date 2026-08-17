@@ -61,6 +61,14 @@ class Payment extends Model
     }
 
     /**
+     * Get the Co-operative Bank payment details.
+     */
+    public function coopPayment(): HasOne
+    {
+        return $this->hasOne(CoopPayment::class);
+    }
+
+    /**
      * Check if the payment is pending.
      */
     public function isPending(): bool
@@ -98,5 +106,13 @@ class Payment extends Model
     public function isBank(): bool
     {
         return $this->channel === 'bank';
+    }
+
+    /**
+     * Check if the payment is via Co-operative Bank.
+     */
+    public function isCoop(): bool
+    {
+        return $this->channel === 'coop';
     }
 }

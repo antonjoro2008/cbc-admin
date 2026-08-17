@@ -36,6 +36,7 @@ class PaymentForm
                             ->label('Payment Method')
                             ->options([
                                 'mpesa' => 'M-Pesa',
+                                'coop' => 'Co-op Bank STK',
                                 'bank' => 'Bank Transfer',
                                 'card' => 'Credit/Debit Card',
                                 'cash' => 'Cash',

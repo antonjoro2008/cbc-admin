@@ -6,6 +6,7 @@ use App\Models\Wallet;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\CoopBankService;
 use App\Services\SmsNotificationService;
 use Illuminate\Http\Request;
 use App\Models\TokenTransaction;
@@ -16,6 +17,10 @@ use Illuminate\Support\Facades\Validator;
 
 class PaymentController extends Controller
 {
+    public function __construct(
+        private readonly CoopBankService $coopBank,
+    ) {}
+
     /**
      * Get list of payments
      */
@@ -69,10 +74,10 @@ class PaymentController extends Controller
 
         $validator = Validator::make($request->all(), [
             'amount' => 'required|numeric|min:0.01',
-            'channel' => 'required|in:mpesa,bank',
+            'channel' => 'required|in:mpesa,bank,coop',
             'currency' => 'required|in:KES,USD',
             'phone_number' => 'required|string|max:15|regex:/^254[0-9]{9}$/',
-            'user_id' => 'required|integer|min:1'
+            'user_id' => 'nullable|integer|min:1'
         ]);
 
         if ($validator->fails()) {
@@ -86,14 +91,19 @@ class PaymentController extends Controller
         try {
             DB::beginTransaction();
 
+            $success = false;
+            $message = 'Sorry, we encountered an error and deposit failed. Please try later';
+
             // Calculate tokens based on amount and tokens_per_shilling setting
             $tokensPerShilling = Setting::getValue('tokens_per_shilling', 1.0);
             $calculatedTokens = round($request->amount * $tokensPerShilling, 2);
 
             $reference = $this->generateReference();
+            $userId = $request->user()?->id ?? $request->user_id;
+
             // Create payment record
             $payment = Payment::create([
-                'user_id' => $request->user_id,
+                'user_id' => $userId,
                 'amount' => $request->amount,
                 'channel' => $request->channel,
                 'currency' => $request->currency,
@@ -103,7 +113,11 @@ class PaymentController extends Controller
             ]);
 
             // Create specific payment details based on channel
-            if ($request->channel === 'mpesa') {
+            if ($request->channel === 'coop') {
+                $initiated = $this->initiateCoopStk($payment, $request->phone_number);
+                $success = $initiated['success'];
+                $message = $initiated['message'];
+            } elseif ($request->channel === 'mpesa') {
 
                 $stkPushUrl = "/deposit/stk";
                 $msisdn = $request->phone_number;
@@ -117,8 +131,6 @@ class PaymentController extends Controller
 
                 $response = $this->callMDarasaAPIPostWithoutToken($stkPayload, $stkPushUrl);
                 Log::info("Response from Main Server " . json_encode($response));
-                $success = false;
-                $message = "Sorry, we encountered an error and deposit failed. Please try later";
                 if (!is_null($response)) {
 
                     Log::info("We got some response");
@@ -130,15 +142,19 @@ class PaymentController extends Controller
                 }
             } elseif ($request->channel === 'bank') {
                 $this->createBankPayment($payment, $request);
+                $success = true;
+                $message = 'Bank payment recorded. Awaiting confirmation.';
             }
 
             DB::commit();
 
+            $statusCode = $success ? 201 : 502;
+
             return response()->json([
                 'success' => $success,
                 'message' => $message,
-                'data' => $payment->load('user.institution')
-            ], 201);
+                'data' => $payment->fresh()->load(['user.institution', 'coopPayment'])
+            ], $statusCode);
 
         } catch (\Exception $e) {
             Log::error("ERROR:: " . $e->getMessage());
@@ -170,7 +186,7 @@ class PaymentController extends Controller
         }
         // Admins can access all payments
 
-        $payment->load(['user.institution', 'mpesaPayment', 'bankPayment']);
+        $payment->load(['user.institution', 'mpesaPayment', 'bankPayment', 'coopPayment']);
 
         return response()->json([
             'success' => true,
@@ -267,6 +283,69 @@ class PaymentController extends Controller
             'amount' => $requestArray['amount'] ?? 0.0,
         ]);
         Log::info("M-Pesa payment details created");
+    }
+
+    /**
+     * Initiate Co-operative Bank STK push and persist the gateway record.
+     *
+     * @return array{success: bool, message: string}
+     */
+    private function initiateCoopStk(Payment $payment, string $phoneNumber): array
+    {
+        $amount = (float) $payment->amount;
+        $stkAmount = fmod($amount, 1.0) === 0.0 ? (int) $amount : $amount;
+
+        $coopPayment = $payment->coopPayment()->create([
+            'message_reference' => $payment->reference,
+            'phone_number' => $phoneNumber,
+            'amount' => $payment->amount,
+            'currency' => $payment->currency,
+            'status' => 'pending',
+            'source' => 'stk',
+            'narration' => config('services.coop.narration'),
+        ]);
+
+        $payload = [
+            'MessageReference' => $payment->reference,
+            'CallBackUrl' => $this->coopBank->callbackUrl(),
+            'OperatorCode' => config('services.coop.operator_code'),
+            'TransactionCurrency' => $payment->currency,
+            'MobileNumber' => $phoneNumber,
+            'Narration' => config('services.coop.narration'),
+            'Amount' => $stkAmount,
+            'MessageDateTime' => gmdate('Y-m-d\TH:i:s.v\Z'),
+            'OtherDetails' => [
+                ['Name' => 'PaymentId', 'Value' => (string) $payment->id],
+                ['Name' => 'Reference', 'Value' => $payment->reference],
+            ],
+        ];
+
+        $response = $this->coopBank->initiateStk($payload);
+        $coopPayment->update(['stk_response' => $response]);
+
+        if (! $this->coopBank->wasStkAccepted($response)) {
+            $payment->update(['status' => 'failed']);
+            $coopPayment->update(['status' => 'failed']);
+            $description = $this->coopBank->findValue($response, [
+                'MessageDescription',
+                'messageDescription',
+                'Description',
+                'Message',
+                '_raw',
+            ]);
+
+            return [
+                'success' => false,
+                'message' => $description
+                    ? (string) $description
+                    : 'Unable to send the Co-op Bank payment prompt. Please try again.',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Please authorize the payment request on your phone.',
+        ];
     }
 
     /**

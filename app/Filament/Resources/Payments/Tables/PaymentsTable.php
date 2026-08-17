@@ -32,7 +32,7 @@ class PaymentsTable
                     ->label('Status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'completed' => 'success',
+                        'completed', 'successful' => 'success',
                         'pending' => 'warning',
                         'failed' => 'danger',
                         'cancelled' => 'gray',

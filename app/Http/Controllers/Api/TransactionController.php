@@ -184,7 +184,7 @@ class TransactionController extends Controller
         // Get payments (credits)
         $payments = Payment::where('user_id', $user->id)
             ->where('status', 'successful')
-            ->with(['mpesaPayment', 'bankPayment'])
+            ->with(['mpesaPayment', 'bankPayment', 'coopPayment'])
             ->get()
             ->map(function ($payment) {
                 return [
@@ -196,7 +196,10 @@ class TransactionController extends Controller
                     'tokens' => $payment->tokens,
                     'status' => $payment->status,
                     'channel' => $payment->channel,
-                    'reference' => $payment->mpesaPayment->transaction_id ?? $payment->bankPayment->transaction_id ?? null,
+                    'reference' => $payment->coopPayment?->transaction_id
+                        ?? $payment->mpesaPayment?->mpesa_receipt_number
+                        ?? $payment->bankPayment?->bank_reference
+                        ?? $payment->reference,
                     'description' => "Token purchase via {$payment->channel}",
                     'currency' => $payment->currency
                 ];
@@ -259,7 +262,7 @@ class TransactionController extends Controller
         // Get payments from all users (institution admin + students)
         $payments = Payment::whereIn('user_id', $userIds)
             ->where('status', 'successful')
-            ->with(['user', 'mpesaPayment', 'bankPayment'])
+            ->with(['user', 'mpesaPayment', 'bankPayment', 'coopPayment'])
             ->get()
             ->map(function ($payment) {
                 return [
@@ -271,7 +274,10 @@ class TransactionController extends Controller
                     'tokens' => $payment->tokens,
                     'status' => $payment->status,
                     'channel' => $payment->channel,
-                    'reference' => $payment->mpesaPayment->transaction_id ?? $payment->bankPayment->transaction_id ?? null,
+                    'reference' => $payment->coopPayment?->transaction_id
+                        ?? $payment->mpesaPayment?->mpesa_receipt_number
+                        ?? $payment->bankPayment?->bank_reference
+                        ?? $payment->reference,
                     'description' => "Token purchase via {$payment->channel}",
                     'currency' => $payment->currency,
                     'student_name' => $payment->user->name,

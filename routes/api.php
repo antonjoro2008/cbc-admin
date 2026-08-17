@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AssessmentController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\CoopPaymentController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\ParentLearnerController;
@@ -44,6 +45,9 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Payment webhook routes (no authentication required)
 Route::post('/payments/mpesa', [PaymentController::class, 'updateStatus']);
+Route::post('/payments/coop/stk-callback', [CoopPaymentController::class, 'stkCallback']);
+Route::post('/payments/coop/ipn', [CoopPaymentController::class, 'ipn'])
+    ->middleware('coop.ipn');
 
 // Public platform metrics for marketing site (skills-zone home page)
 Route::get('/platform-stats', [PlatformStatsController::class, 'index']);
@@ -87,6 +91,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Payments
     Route::get('/payments', [PaymentController::class, 'index']);
     Route::post('/payments', [PaymentController::class, 'store']);
+    Route::post('/payments/{payment}/sync', [CoopPaymentController::class, 'syncStatus']);
     Route::get('/payments/{payment}', [PaymentController::class, 'show']);
     
     // Token history
