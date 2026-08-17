@@ -56,7 +56,7 @@ class DashboardDataService
     {
         $data = array_merge(
             ['user' => $user->load('institution', 'wallet')],
-            $this->buildPayload($user),
+            $this->buildPayload($user, includeSettings: true),
         );
 
         if ($user->isInstitution() && $user->institution) {
