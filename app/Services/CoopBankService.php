@@ -15,21 +15,11 @@ class CoopBankService
     public function initiateStk(array $payload): array
     {
         $url = (string) config('services.coop.stk_url');
-
-        Log::info('Co-op STK initiate request', [
-            'url' => $url,
-            'message_reference' => $payload['MessageReference'] ?? null,
-            'mobile' => $payload['MobileNumber'] ?? null,
-            'amount' => $payload['Amount'] ?? null,
-        ]);
-
-        $response = $this->authenticatedClient()->post($url, $payload);
+        $response = $this->loggedClient('STK initiate', $this->authenticatedClient())
+            ->post($url, $payload);
         $body = $this->decodeResponse($response->body());
 
-        Log::info('Co-op STK initiate response', [
-            'status' => $response->status(),
-            'body' => $body,
-        ]);
+        $this->logIncoming('STK initiate', $response, $body);
 
         return $body;
     }
@@ -37,21 +27,13 @@ class CoopBankService
     public function transactionStatus(string $messageReference): array
     {
         $url = (string) config('services.coop.status_url');
-
-        Log::info('Co-op STK status request', [
-            'url' => $url,
-            'message_reference' => $messageReference,
-        ]);
-
-        $response = $this->authenticatedClient()->post($url, [
-            'MessageReference' => $messageReference,
-        ]);
+        $response = $this->loggedClient('STK status', $this->authenticatedClient())
+            ->post($url, [
+                'MessageReference' => $messageReference,
+            ]);
         $body = $this->decodeResponse($response->body());
 
-        Log::info('Co-op STK status response', [
-            'status' => $response->status(),
-            'body' => $body,
-        ]);
+        $this->logIncoming('STK status', $response, $body);
 
         return $body;
     }
@@ -231,7 +213,7 @@ class CoopBankService
 
     private function authenticatedClient(): PendingRequest
     {
-        return Http::timeout((int) config('services.coop.timeout', 30))
+        return $this->baseClient()
             ->acceptJson()
             ->asJson()
             ->withToken($this->accessToken());
@@ -251,29 +233,96 @@ class CoopBankService
             throw new RuntimeException('Co-op Bank consumer key/secret are not configured.');
         }
 
-        $response = Http::timeout((int) config('services.coop.timeout', 30))
-            ->asForm()
-            ->withBasicAuth($key, $secret)
-            ->post((string) config('services.coop.token_url'), [
-                'grant_type' => 'client_credentials',
-            ]);
+        $url = (string) config('services.coop.token_url');
+        $bodyString = 'grant_type=client_credentials';
+
+        $response = $this->loggedClient('token', $this->baseClient())
+            ->withHeaders([
+                'Accept' => '*/*',
+                'Content-Type' => 'application/x-www-form-urlencoded',
+                'Authorization' => 'Basic '.base64_encode($key.':'.$secret),
+            ])
+            ->withBody($bodyString, 'application/x-www-form-urlencoded')
+            ->post($url);
 
         $body = $this->decodeResponse($response->body());
         $token = $body['access_token'] ?? $body['accessToken'] ?? null;
 
         if (! $response->successful() || ! is_string($token) || $token === '') {
-            Log::error('Co-op token request failed', [
-                'status' => $response->status(),
-                'body' => $body,
-            ]);
+            $this->logIncoming('token', $response, $body, error: true);
 
             throw new RuntimeException('Unable to obtain Co-op Bank access token.');
         }
+
+        $this->logIncoming('token', $response, ['token' => 'obtained', 'expires_in' => $body['expires_in'] ?? null]);
 
         $ttl = max(60, (int) ($body['expires_in'] ?? 3600) - 60);
         Cache::put(self::TOKEN_CACHE_KEY, $token, $ttl);
 
         return $token;
+    }
+
+    private function baseClient(): PendingRequest
+    {
+        return Http::timeout((int) config('services.coop.timeout', 30))
+            ->withHeaders([
+                'User-Agent' => (string) config('services.coop.user_agent', 'PostmanRuntime/7.43.2'),
+            ])
+            ->withOptions([
+                'http_errors' => false,
+                'version' => '1.1',
+            ]);
+    }
+
+    private function loggedClient(string $label, PendingRequest $pending): PendingRequest
+    {
+        return $pending->beforeSending(function ($request, $options) use ($label) {
+            Log::info("Co-op outgoing {$label}", [
+                'method' => $request->method(),
+                'url' => (string) $request->url(),
+                'headers' => $this->headersForLog($request->headers()),
+                'body' => $request->body(),
+                'http_version' => $options['version'] ?? null,
+                'timeout' => $options['timeout'] ?? null,
+            ]);
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $headers
+     * @return array<string, mixed>
+     */
+    private function headersForLog(array $headers): array
+    {
+        $normalized = [];
+
+        foreach ($headers as $name => $value) {
+            $normalized[$name] = is_array($value) ? implode(', ', $value) : $value;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  array<string, mixed>  $body
+     */
+    private function logIncoming(string $label, \Illuminate\Http\Client\Response $response, array $body, bool $error = false): void
+    {
+        $payload = [
+            'status' => $response->status(),
+            'reason' => $response->reason(),
+            'effective_url' => (string) $response->effectiveUri(),
+            'headers' => $this->headersForLog($response->headers()),
+            'body' => $body,
+        ];
+
+        if ($error) {
+            Log::error("Co-op incoming {$label}", $payload);
+
+            return;
+        }
+
+        Log::info("Co-op incoming {$label}", $payload);
     }
 
     /**
