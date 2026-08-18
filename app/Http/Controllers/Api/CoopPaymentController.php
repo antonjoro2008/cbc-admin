@@ -71,7 +71,7 @@ class CoopPaymentController extends Controller
                 });
             }
 
-            return $this->ipnSuccess('Duplicate notification ignored');
+            return $this->ipnSuccess('duplicate_transaction_id');
         }
 
         $eventType = strtoupper(trim((string) ($payload['EventType'] ?? '')));
@@ -119,17 +119,17 @@ class CoopPaymentController extends Controller
                 'transaction_id' => $transactionId,
             ]);
 
-            return $this->ipnSuccess('Notification stored');
+            return $this->ipnSuccess('account_number_mismatch');
         }
 
         if ($eventType !== 'CREDIT') {
             $coopPayment->update(['status' => 'ignored']);
 
-            return $this->ipnSuccess('Non-credit event stored');
+            return $this->ipnSuccess('non_credit_event');
         }
 
         if (! $matchedPayment) {
-            return $this->ipnSuccess('Unmatched credit stored for reconciliation');
+            return $this->ipnSuccess('unmatched_credit');
         }
 
         DB::transaction(function () use ($matchedPayment, $coopPayment) {
@@ -137,7 +137,7 @@ class CoopPaymentController extends Controller
             $coopPayment->update(['status' => 'successful']);
         });
 
-        return $this->ipnSuccess('Successfully received data');
+        return $this->ipnSuccess('matched_credit');
     }
 
     /**
@@ -249,11 +249,18 @@ class CoopPaymentController extends Controller
         }
     }
 
-    private function ipnSuccess(string $message): JsonResponse
+    /**
+     * Co-op requires this exact success body on every accepted IPN (HTTP 200).
+     */
+    private function ipnSuccess(?string $internalNote = null): JsonResponse
     {
+        if ($internalNote !== null) {
+            Log::info('Co-op IPN acknowledged', ['note' => $internalNote]);
+        }
+
         return response()->json([
             'MessageCode' => '200',
-            'Message' => $message,
+            'Message' => 'Successfully received data',
         ], 200);
     }
 
