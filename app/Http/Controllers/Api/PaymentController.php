@@ -307,6 +307,7 @@ class PaymentController extends Controller
 
         $payload = [
             'MessageReference' => $payment->reference,
+            // Co-op will not invoke this; the field remains because the STK API schema requires it.
             'CallBackUrl' => $this->coopBank->callbackUrl(),
             'OperatorCode' => config('services.coop.operator_code'),
             'TransactionCurrency' => $payment->currency,

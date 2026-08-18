@@ -84,6 +84,11 @@ class CoopBankService
     }
 
     /**
+     * Interpret STK Transaction Status (not the initial STK Push ack).
+     *
+     * Co-op confirmed they will not send STK callbacks. MessageCode 0 on the
+     * status API usually means the enquiry succeeded, not that the customer paid.
+     *
      * @return 'successful'|'failed'|'pending'
      */
     public function interpretOutcome(array $payload): string
@@ -97,51 +102,12 @@ class CoopBankService
             'result',
         ])));
 
-        if (in_array($status, ['SUCCESS', 'SUCCESSFUL', 'COMPLETED', 'PAID', 'COMPLETE', 'PROCESSED'], true)) {
+        if (in_array($status, ['SUCCESS', 'SUCCESSFUL', 'COMPLETED', 'PAID', 'COMPLETE', 'PROCESSED', 'SETTLED', 'CREDIT', 'CREDITED'], true)) {
             return 'successful';
         }
 
-        if (in_array($status, ['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'TIMEOUT', 'EXPIRED', 'DECLINED', 'REJECTED'], true)) {
+        if (in_array($status, ['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'TIMEOUT', 'EXPIRED', 'DECLINED', 'REJECTED', 'NOT FOUND', 'NOTFOUND'], true)) {
             return 'failed';
-        }
-
-        $code = $this->findValue($payload, [
-            'ResultCode',
-            'resultCode',
-            'MessageCode',
-            'messageCode',
-        ]);
-
-        if ($code !== null) {
-            $normalized = strtoupper(trim((string) $code));
-            if (in_array($normalized, ['0', '00', '200', '201', 'SUCCESS'], true)) {
-                $description = strtolower((string) $this->findValue($payload, [
-                    'ResultDesc',
-                    'MessageDescription',
-                    'Description',
-                ]));
-
-                if ($description !== '' && (
-                    str_contains($description, 'fail')
-                    || str_contains($description, 'cancel')
-                    || str_contains($description, 'timeout')
-                    || str_contains($description, 'expired')
-                )) {
-                    return 'failed';
-                }
-
-                if ($status === 'PENDING' || $status === 'PROCESSING' || $status === 'QUEUED') {
-                    return 'pending';
-                }
-
-                if ($this->findValue($payload, ['TransactionId', 'TransactionID', 'transactionId', 'ReceiptNumber']) !== null) {
-                    return 'successful';
-                }
-            }
-
-            if (! in_array($normalized, ['0', '00', '200', '201', 'SUCCESS', 'PENDING', '1'], true)) {
-                return 'failed';
-            }
         }
 
         $description = strtolower((string) $this->findValue($payload, [
@@ -149,10 +115,30 @@ class CoopBankService
             'ResultDesc',
             'Description',
             'Message',
+            'TransactionStatusDescription',
         ]));
 
-        if (str_contains($description, 'fail') || str_contains($description, 'cancel') || str_contains($description, 'timeout')) {
-            return 'failed';
+        if ($description !== '') {
+            if (str_contains($description, 'fail')
+                || str_contains($description, 'cancel')
+                || str_contains($description, 'timeout')
+                || str_contains($description, 'expired')
+                || str_contains($description, 'declin')
+                || str_contains($description, 'not found')
+                || str_contains($description, 'insufficient')
+            ) {
+                return 'failed';
+            }
+
+            if (
+                str_contains($description, 'completed')
+                || str_contains($description, 'paid')
+                || str_contains($description, 'settled')
+                || str_contains($description, 'credited')
+                || preg_match('/\b(transaction|payment)\s+(is\s+)?success/', $description)
+            ) {
+                return 'successful';
+            }
         }
 
         return 'pending';

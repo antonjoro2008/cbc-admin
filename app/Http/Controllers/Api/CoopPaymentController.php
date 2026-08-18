@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CoopPayment;
 use App\Models\Payment;
 use App\Services\CoopBankService;
+use App\Services\CoopPaymentSyncService;
 use App\Services\PaymentFulfillmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,10 +18,12 @@ class CoopPaymentController extends Controller
     public function __construct(
         private readonly CoopBankService $coopBank,
         private readonly PaymentFulfillmentService $fulfillment,
+        private readonly CoopPaymentSyncService $stkSync,
     ) {}
 
     /**
-     * STK result callback from Co-operative Bank.
+     * Co-op confirmed they will not send STK callbacks. This endpoint only
+     * acknowledges an unexpected post so their gateway does not retry.
      */
     public function stkCallback(Request $request): JsonResponse
     {
@@ -31,51 +34,7 @@ class CoopPaymentController extends Controller
             ], 403);
         }
 
-        $payload = $request->all();
-        Log::info('Co-op STK callback received', $payload);
-
-        $messageReference = $this->coopBank->extractMessageReference($payload);
-        $coopPayment = $messageReference
-            ? CoopPayment::where('message_reference', $messageReference)->first()
-            : null;
-
-        if (! $coopPayment) {
-            Log::warning('Co-op STK callback could not be matched', [
-                'message_reference' => $messageReference,
-                'payload' => $payload,
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Callback received',
-            ]);
-        }
-
-        $outcome = $this->coopBank->interpretOutcome($payload);
-
-        DB::transaction(function () use ($coopPayment, $payload, $outcome) {
-            $coopPayment->refresh();
-            $coopPayment->update([
-                'callback_payload' => $payload,
-                'transaction_id' => $this->coopBank->extractTransactionId($payload) ?? $coopPayment->transaction_id,
-                'phone_number' => $this->coopBank->extractPhoneNumber($payload) ?? $coopPayment->phone_number,
-                'amount' => $this->coopBank->extractAmount($payload) ?? $coopPayment->amount,
-                'status' => $outcome === 'pending' ? $coopPayment->status : $outcome,
-                'source' => 'stk',
-                'transaction_date' => now(),
-            ]);
-
-            $payment = $coopPayment->payment;
-            if (! $payment) {
-                return;
-            }
-
-            if ($outcome === 'successful') {
-                $this->fulfillment->creditIfPending($payment);
-            } elseif ($outcome === 'failed' && $payment->status === 'pending') {
-                $payment->update(['status' => 'failed']);
-            }
-        });
+        Log::info('Co-op STK callback received (ignored; status enquiry is the source of truth)', $request->all());
 
         return response()->json([
             'success' => true,
@@ -97,7 +56,21 @@ class CoopPaymentController extends Controller
             return $this->ipnFailure('TransactionId is required');
         }
 
-        if (CoopPayment::where('transaction_id', $transactionId)->exists()) {
+        $existingByTransaction = CoopPayment::where('transaction_id', $transactionId)->first();
+        if ($existingByTransaction) {
+            $payment = $existingByTransaction->payment;
+            $eventType = strtoupper(trim((string) ($payload['EventType'] ?? '')));
+
+            if ($payment && $eventType === 'CREDIT' && $payment->status !== 'successful') {
+                DB::transaction(function () use ($payment, $existingByTransaction, $payload) {
+                    $this->fulfillment->creditIfPending($payment);
+                    $existingByTransaction->update([
+                        'ipn_payload' => $payload,
+                        'status' => 'successful',
+                    ]);
+                });
+            }
+
             return $this->ipnSuccess('Duplicate notification ignored');
         }
 
@@ -197,27 +170,25 @@ class CoopPaymentController extends Controller
             ]);
         }
 
-        $statusPayload = $this->coopBank->transactionStatus($coopPayment->message_reference);
-        $outcome = $this->coopBank->interpretOutcome($statusPayload);
-
-        DB::transaction(function () use ($coopPayment, $payment, $statusPayload, $outcome) {
-            $coopPayment->update([
-                'stk_response' => array_merge($coopPayment->stk_response ?? [], ['status_enquiry' => $statusPayload]),
-                'transaction_id' => $this->coopBank->extractTransactionId($statusPayload) ?? $coopPayment->transaction_id,
-                'status' => $outcome === 'pending' ? $coopPayment->status : $outcome,
+        try {
+            $payment = $this->stkSync->refreshFromStatusEnquiry($payment);
+        } catch (\Throwable $e) {
+            Log::error('Co-op STK status sync failed', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
             ]);
 
-            if ($outcome === 'successful') {
-                $this->fulfillment->creditIfPending($payment);
-            } elseif ($outcome === 'failed' && $payment->status === 'pending') {
-                $payment->update(['status' => 'failed']);
-            }
-        });
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment is still pending confirmation',
+                'data' => $payment->fresh()->load(['user.institution', 'coopPayment']),
+            ]);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Payment status refreshed',
-            'data' => $payment->fresh()->load(['user.institution', 'coopPayment']),
+            'data' => $payment,
         ]);
     }
 
