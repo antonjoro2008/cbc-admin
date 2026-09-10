@@ -51,7 +51,8 @@ return [
         'ipn_token' => env('COOP_IPN_TOKEN'),
         'account_number' => env('COOP_ACCOUNT_NUMBER'),
         'timeout' => (int) env('COOP_TIMEOUT', 30),
-        'user_agent' => env('COOP_USER_AGENT', 'PostmanRuntime/7.43.2'),
+        // Co-op Akamai blocks PostmanRuntime; use a normal app UA (or leave blank for Guzzle default).
+        'user_agent' => env('COOP_USER_AGENT', 'GravityCBC-API/1.0'),
     ],
 
 ];

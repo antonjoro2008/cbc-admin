@@ -264,14 +264,18 @@ class CoopBankService
 
     private function baseClient(): PendingRequest
     {
-        return Http::timeout((int) config('services.coop.timeout', 30))
-            ->withHeaders([
-                'User-Agent' => (string) config('services.coop.user_agent', 'PostmanRuntime/7.43.2'),
-            ])
+        $client = Http::timeout((int) config('services.coop.timeout', 30))
             ->withOptions([
                 'http_errors' => false,
                 'version' => '1.1',
             ]);
+
+        $userAgent = trim((string) config('services.coop.user_agent', 'GravityCBC-API/1.0'));
+        if ($userAgent !== '') {
+            $client = $client->withHeaders(['User-Agent' => $userAgent]);
+        }
+
+        return $client;
     }
 
     private function loggedClient(string $label, PendingRequest $pending): PendingRequest
